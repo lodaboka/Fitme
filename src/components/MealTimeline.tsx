@@ -196,7 +196,7 @@ export default function MealTimeline({
                       }
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number) => [`${Math.round(value)}g`, ""]} 
+                      formatter={(value: any) => [`${Math.round(Number(value || 0))}g`, ""]} 
                       contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                       itemStyle={{ color: 'var(--fm-text-primary)', fontWeight: 600 }}
                     />
