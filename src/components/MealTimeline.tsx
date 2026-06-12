@@ -145,7 +145,7 @@ export default function MealTimeline({
       <AnimatePresence>
         {selectedMeal && (
           <motion.div
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -182,19 +182,19 @@ export default function MealTimeline({
               </div>
 
               {/* Modal Body */}
-              <div className="p-6">
+              <div className="p-6 pb-28 sm:pb-6">
                 <div className="flex justify-between items-center mb-6">
                   <div>
                     <p className="text-3xl font-bold text-[var(--fm-green)]">
                       {Math.round(selectedMeal.total_calories)}
                     </p>
-                    <p className="text-xs font-medium text-[var(--fm-text-muted)] uppercase tracking-wider">Calories</p>
+                    <p className="text-xs font-bold text-[var(--fm-text-secondary)] uppercase tracking-wider">Calories</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-semibold text-[var(--fm-text-primary)]">
+                    <p className="text-sm font-bold text-[var(--fm-text-primary)]">
                       {selectedMeal.meal_category}
                     </p>
-                    <p className="text-xs text-[var(--fm-text-muted)] mt-0.5">
+                    <p className="text-xs font-semibold text-[var(--fm-text-secondary)] mt-0.5">
                       {new Date(selectedMeal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', hour12: true })}
                     </p>
                   </div>
@@ -244,7 +244,7 @@ export default function MealTimeline({
                   {/* Center text in donut */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="text-center">
-                      <span className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Macros</span>
+                      <span className="text-[11px] font-bold text-[var(--fm-text-secondary)] uppercase tracking-wider">Macros</span>
                     </div>
                   </div>
                 </div>
@@ -254,19 +254,19 @@ export default function MealTimeline({
                   <div className="text-center flex-1">
                     <div className="w-3 h-3 rounded-full bg-[var(--fm-protein)] mx-auto mb-1.5 shadow-sm"></div>
                     <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_protein)}g</p>
-                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Protein</p>
+                    <p className="text-[10px] font-bold text-[var(--fm-text-secondary)] uppercase">Protein</p>
                   </div>
                   <div className="w-px h-8 bg-white/15"></div>
                   <div className="text-center flex-1">
                     <div className="w-3 h-3 rounded-full bg-[var(--fm-carbs)] mx-auto mb-1.5 shadow-sm"></div>
                     <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_carbs)}g</p>
-                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Carbs</p>
+                    <p className="text-[10px] font-bold text-[var(--fm-text-secondary)] uppercase">Carbs</p>
                   </div>
                   <div className="w-px h-8 bg-white/15"></div>
                   <div className="text-center flex-1">
                     <div className="w-3 h-3 rounded-full bg-[var(--fm-fats)] mx-auto mb-1.5 shadow-sm"></div>
                     <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_fats)}g</p>
-                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Fats</p>
+                    <p className="text-[10px] font-bold text-[var(--fm-text-secondary)] uppercase">Fats</p>
                   </div>
                 </div>
               </div>
