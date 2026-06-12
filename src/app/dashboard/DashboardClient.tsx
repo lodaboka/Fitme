@@ -1,11 +1,12 @@
 "use client";
 
 // ============================================================
-// Fit Me v2.1 — Dashboard Client Component
-// Skeleton loading → animated data reveal
+// Fit Me v3 — Dashboard Client (Liquid Glass Theme)
+// Framer Motion animations, glass panels, fluid interactions
 // ============================================================
 
 import { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Menu, Bell, Plus } from "lucide-react";
 import Link from "next/link";
 import { Profile, FoodLog, DailyMacroTotals } from "@/lib/types";
@@ -17,77 +18,29 @@ import MealTimeline from "@/components/MealTimeline";
 import MacroWarning from "@/components/MacroWarning";
 import HamburgerMenu from "@/components/HamburgerMenu";
 import Navbar from "@/components/Navbar";
+import DashboardSkeleton from "@/components/DashboardSkeleton";
 
 interface DashboardClientProps {
   profile: Profile;
   allLogs: FoodLog[];
 }
 
-function DashboardSkeleton() {
-  return (
-    <div className="min-h-screen pb-24 bg-[var(--background)]">
-      {/* Header skeleton */}
-      <div className="px-5 pt-14 pb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl skeleton-pulse" />
-          <div>
-            <div className="h-3 w-20 skeleton-pulse mb-2" />
-            <div className="h-5 w-28 skeleton-pulse" />
-          </div>
-        </div>
-        <div className="w-10 h-10 rounded-xl skeleton-pulse" />
-      </div>
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.1 },
+  },
+};
 
-      <div className="px-5 space-y-6">
-        {/* Ring skeleton */}
-        <div className="card-elevated py-8 flex flex-col items-center">
-          <div className="w-[220px] h-[220px] rounded-full skeleton-pulse" />
-        </div>
-
-        {/* Macro cards skeleton */}
-        <div className="flex gap-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="card-elevated p-4 flex-1 min-w-[100px] space-y-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl skeleton-pulse" />
-                <div className="h-3 w-12 skeleton-pulse" />
-              </div>
-              <div className="h-5 w-16 skeleton-pulse" />
-              <div className="h-[5px] w-full skeleton-pulse rounded-full" />
-            </div>
-          ))}
-        </div>
-
-        {/* Calendar skeleton */}
-        <div>
-          <div className="h-4 w-40 skeleton-pulse mb-3" />
-          <div className="flex gap-2">
-            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <div key={i} className="flex-1 h-16 skeleton-pulse rounded-2xl" />
-            ))}
-          </div>
-        </div>
-
-        {/* Meals skeleton */}
-        <div>
-          <div className="flex justify-between mb-3">
-            <div className="h-4 w-28 skeleton-pulse" />
-            <div className="h-7 w-24 skeleton-pulse rounded-full" />
-          </div>
-          {[1, 2].map((i) => (
-            <div key={i} className="card-elevated p-4 mb-3 flex gap-3">
-              <div className="w-12 h-12 rounded-xl skeleton-pulse" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-24 skeleton-pulse" />
-                <div className="h-3 w-32 skeleton-pulse" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 300, damping: 30 },
+  },
+};
 
 export default function DashboardClient({
   profile,
@@ -148,7 +101,12 @@ export default function DashboardClient({
   }
 
   return (
-    <div className="min-h-screen pb-24 bg-[var(--background)] animate-fade-in">
+    <motion.div
+      className="min-h-screen pb-24"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       {/* Hamburger Menu */}
       <HamburgerMenu
         isOpen={menuOpen}
@@ -158,15 +116,20 @@ export default function DashboardClient({
       />
 
       {/* Header */}
-      <div className="px-5 pt-14 pb-4 flex items-center justify-between">
+      <motion.div
+        className="px-5 pt-14 pb-4 flex items-center justify-between"
+        variants={itemVariants}
+      >
         <div className="flex items-center gap-3">
-          <button
+          <motion.button
             onClick={() => setMenuOpen(true)}
-            className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
+            className="w-10 h-10 min-h-[44px] min-w-[44px] rounded-2xl glass-card flex items-center justify-center transition-all duration-200"
+            whileTap={{ scale: 0.92 }}
+            whileHover={{ scale: 1.05 }}
             id="hamburger-btn"
           >
             <Menu className="w-5 h-5 text-[var(--fm-text-primary)]" />
-          </button>
+          </motion.button>
           <div>
             <p className="text-xs text-[var(--fm-text-muted)]">
               {getGreeting()} 👋
@@ -179,25 +142,32 @@ export default function DashboardClient({
             </h1>
           </div>
         </div>
-        <button className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors">
+        <motion.button
+          className="w-10 h-10 min-h-[44px] min-w-[44px] rounded-2xl glass-card flex items-center justify-center transition-all duration-200"
+          whileTap={{ scale: 0.92 }}
+          whileHover={{ scale: 1.05 }}
+        >
           <Bell className="w-5 h-5 text-[var(--fm-text-muted)]" />
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
 
       <div className="px-5 space-y-6">
         {/* Macro Warnings */}
         <MacroWarning exceededMacros={exceededMacros} />
 
         {/* Calorie Ring */}
-        <div className="card-elevated py-8 flex flex-col items-center">
+        <motion.div
+          className="glass-panel py-8 flex flex-col items-center"
+          variants={itemVariants}
+        >
           <CalorieRing
             consumed={totals.calories}
             goal={profile.daily_calories_goal}
           />
-        </div>
+        </motion.div>
 
         {/* Macro Cards Row */}
-        <div className="flex gap-3">
+        <motion.div className="flex gap-3" variants={itemVariants}>
           <MacroCard
             label="Protein"
             current={totals.protein}
@@ -232,10 +202,10 @@ export default function DashboardClient({
               </svg>
             }
           />
-        </div>
+        </motion.div>
 
         {/* Weekly Calendar */}
-        <div>
+        <motion.div variants={itemVariants}>
           <h2
             className="text-base font-bold text-[var(--fm-text-primary)] mb-3"
             style={{ fontFamily: "var(--font-heading)" }}
@@ -246,10 +216,10 @@ export default function DashboardClient({
             selectedDate={selectedDate}
             onDateSelect={setSelectedDate}
           />
-        </div>
+        </motion.div>
 
         {/* Meal Log */}
-        <div>
+        <motion.div variants={itemVariants}>
           <div className="flex items-center justify-between mb-3">
             <h2
               className="text-base font-bold text-[var(--fm-text-primary)]"
@@ -259,17 +229,17 @@ export default function DashboardClient({
             </h2>
             <Link
               href="/snap"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--fm-green-bg)] text-[var(--fm-green-dark)] text-xs font-medium hover:bg-[var(--fm-green)]/15 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] rounded-full glass-card text-[var(--fm-green-dark)] text-xs font-medium hover:shadow-md transition-all duration-200 ease-out active:scale-95"
             >
               <Plus className="w-3.5 h-3.5" />
               Add Meal
             </Link>
           </div>
           <MealTimeline logs={todayLogs} />
-        </div>
+        </motion.div>
       </div>
 
       <Navbar />
-    </div>
+    </motion.div>
   );
 }

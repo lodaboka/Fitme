@@ -1,14 +1,15 @@
 "use client";
 
 // ============================================================
-// Fit Me v2 — Meal Timeline Component
-// Displays logged meals with thumbnails and clickable interactive modals
+// Fit Me v3 — Meal Timeline (Liquid Glass Theme)
+// Glass cards with Framer Motion stagger + animated modal
 // ============================================================
 
 import { FoodLog, MealCategory } from "@/lib/types";
 import { Camera, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface MealTimelineProps {
@@ -38,8 +39,13 @@ export default function MealTimeline({
 
   if (filteredLogs.length === 0) {
     return (
-      <div className="text-center py-10">
-        <div className="w-16 h-16 rounded-full bg-[var(--fm-green-bg)] flex items-center justify-center mx-auto mb-3">
+      <motion.div
+        className="text-center py-10"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <div className="w-16 h-16 rounded-full glass-panel flex items-center justify-center mx-auto mb-3">
           <Camera className="w-7 h-7 text-[var(--fm-green)]" />
         </div>
         <p className="text-sm font-medium text-[var(--fm-text-primary)]">
@@ -55,21 +61,30 @@ export default function MealTimeline({
           <Plus className="w-4 h-4" />
           Add Meal
         </Link>
-      </div>
+      </motion.div>
     );
   }
 
   return (
     <div className="space-y-3">
       {filteredLogs.map((log, index) => (
-        <div
+        <motion.div
           key={log.id}
           onClick={() => setSelectedMeal(log)}
-          className="card-elevated p-3 flex gap-3 animate-slide-up cursor-pointer hover:bg-gray-50 transition-colors"
-          style={{ animationDelay: `${index * 0.05}s` }}
+          className="glass-panel p-3 flex gap-3 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{
+            type: "spring",
+            stiffness: 300,
+            damping: 30,
+            delay: index * 0.05,
+          }}
+          whileHover={{ scale: 1.01, y: -2 }}
+          whileTap={{ scale: 0.98 }}
         >
           {/* Thumbnail */}
-          <div className="w-16 h-16 rounded-xl bg-gray-100 overflow-hidden shrink-0">
+          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 glass-card">
             {log.image_url ? (
               <img
                 src={log.image_url}
@@ -78,7 +93,7 @@ export default function MealTimeline({
                 loading="lazy"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-300">
+              <div className="w-full h-full flex items-center justify-center text-[var(--fm-text-muted)]">
                 <Camera className="w-6 h-6" />
               </div>
             )}
@@ -123,117 +138,142 @@ export default function MealTimeline({
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       ))}
 
-      {/* Detail Modal for Clickable Cards */}
-      {selectedMeal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 animate-fade-in" 
-          onClick={() => setSelectedMeal(null)}
-        >
-          <div 
-            className="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl animate-slide-up" 
-            onClick={e => e.stopPropagation()}
+      {/* Detail Modal with AnimatePresence */}
+      <AnimatePresence>
+        {selectedMeal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedMeal(null)}
           >
-            <div className="p-5 border-b border-gray-100 flex justify-between items-center">
-              <h3 className="font-semibold text-lg text-[var(--fm-text-primary)] truncate pr-4">
-                {selectedMeal.items_json?.[0]?.name || selectedMeal.meal_category}
-              </h3>
-              <button 
-                onClick={() => setSelectedMeal(null)} 
-                className="p-1.5 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            {/* Modal Body */}
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <div>
-                  <p className="text-3xl font-bold text-[var(--fm-green)]">
-                    {Math.round(selectedMeal.total_calories)}
-                  </p>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Calories</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-[var(--fm-text-primary)]">
-                    {selectedMeal.meal_category}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {new Date(selectedMeal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', hour12: true })}
-                  </p>
-                </div>
+            {/* Glass backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/30 backdrop-blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+
+            {/* Modal content */}
+            <motion.div
+              className="relative glass-panel w-full max-w-sm overflow-hidden rounded-t-3xl sm:rounded-3xl shadow-2xl"
+              initial={{ y: 100, opacity: 0, scale: 0.95 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: 100, opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-5 border-b border-white/10 flex justify-between items-center">
+                <h3 className="font-semibold text-lg text-[var(--fm-text-primary)] truncate pr-4">
+                  {selectedMeal.items_json?.[0]?.name || selectedMeal.meal_category}
+                </h3>
+                <motion.button
+                  onClick={() => setSelectedMeal(null)}
+                  className="p-1.5 rounded-full glass-card text-[var(--fm-text-muted)] hover:text-[var(--fm-text-primary)] transition-colors"
+                  whileTap={{ scale: 0.85 }}
+                >
+                  <X className="w-5 h-5" />
+                </motion.button>
               </div>
 
-              {/* Recharts Pie Chart */}
-              <div className="h-48 w-full relative">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: "Protein", value: selectedMeal.total_protein || 0, color: "var(--fm-protein)" },
-                        { name: "Carbs", value: selectedMeal.total_carbs || 0, color: "var(--fm-carbs)" },
-                        { name: "Fats", value: selectedMeal.total_fats || 0, color: "var(--fm-fats)" }
-                      ]}
-                      dataKey="value"
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={4}
-                      stroke="none"
-                    >
-                      {
-                        [
-                          { color: "var(--fm-protein)" },
-                          { color: "var(--fm-carbs)" },
-                          { color: "var(--fm-fats)" }
-                        ].map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))
-                      }
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: any) => [`${Math.round(Number(value || 0))}g`, ""]} 
-                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                      itemStyle={{ color: 'var(--fm-text-primary)', fontWeight: 600 }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                {/* Center text in donut */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                  <div className="text-center">
-                    <span className="text-[10px] font-medium text-gray-400 uppercase">Macros</span>
+              {/* Modal Body */}
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-6">
+                  <div>
+                    <p className="text-3xl font-bold text-[var(--fm-green)]">
+                      {Math.round(selectedMeal.total_calories)}
+                    </p>
+                    <p className="text-xs font-medium text-[var(--fm-text-muted)] uppercase tracking-wider">Calories</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-[var(--fm-text-primary)]">
+                      {selectedMeal.meal_category}
+                    </p>
+                    <p className="text-xs text-[var(--fm-text-muted)] mt-0.5">
+                      {new Date(selectedMeal.logged_at).toLocaleTimeString([], { hour: '2-digit', minute:'2-digit', hour12: true })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Recharts Pie Chart */}
+                <div className="h-48 w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Protein", value: selectedMeal.total_protein || 0, color: "var(--fm-protein)" },
+                          { name: "Carbs", value: selectedMeal.total_carbs || 0, color: "var(--fm-carbs)" },
+                          { name: "Fats", value: selectedMeal.total_fats || 0, color: "var(--fm-fats)" }
+                        ]}
+                        dataKey="value"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={4}
+                        stroke="none"
+                      >
+                        {
+                          [
+                            { color: "var(--fm-protein)" },
+                            { color: "var(--fm-carbs)" },
+                            { color: "var(--fm-fats)" }
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))
+                        }
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: any) => [`${Math.round(Number(value || 0))}g`, ""]}
+                        contentStyle={{
+                          borderRadius: '16px',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          background: 'rgba(255,255,255,0.15)',
+                          backdropFilter: 'blur(12px)',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        }}
+                        itemStyle={{ color: 'var(--fm-text-primary)', fontWeight: 600 }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Center text in donut */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="text-center">
+                      <span className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Macros</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Macro Legend — glass-styled */}
+                <div className="flex justify-between items-center mt-6 glass-card p-4">
+                  <div className="text-center flex-1">
+                    <div className="w-3 h-3 rounded-full bg-[var(--fm-protein)] mx-auto mb-1.5 shadow-sm"></div>
+                    <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_protein)}g</p>
+                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Protein</p>
+                  </div>
+                  <div className="w-px h-8 bg-white/15"></div>
+                  <div className="text-center flex-1">
+                    <div className="w-3 h-3 rounded-full bg-[var(--fm-carbs)] mx-auto mb-1.5 shadow-sm"></div>
+                    <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_carbs)}g</p>
+                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Carbs</p>
+                  </div>
+                  <div className="w-px h-8 bg-white/15"></div>
+                  <div className="text-center flex-1">
+                    <div className="w-3 h-3 rounded-full bg-[var(--fm-fats)] mx-auto mb-1.5 shadow-sm"></div>
+                    <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_fats)}g</p>
+                    <p className="text-[10px] font-medium text-[var(--fm-text-muted)] uppercase">Fats</p>
                   </div>
                 </div>
               </div>
-
-              {/* Macro Legend */}
-              <div className="flex justify-between items-center mt-6 bg-gray-50 rounded-2xl p-4">
-                <div className="text-center flex-1">
-                  <div className="w-3 h-3 rounded-full bg-[var(--fm-protein)] mx-auto mb-1.5 shadow-sm"></div>
-                  <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_protein)}g</p>
-                  <p className="text-[10px] font-medium text-gray-500 uppercase">Protein</p>
-                </div>
-                <div className="w-px h-8 bg-gray-200"></div>
-                <div className="text-center flex-1">
-                  <div className="w-3 h-3 rounded-full bg-[var(--fm-carbs)] mx-auto mb-1.5 shadow-sm"></div>
-                  <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_carbs)}g</p>
-                  <p className="text-[10px] font-medium text-gray-500 uppercase">Carbs</p>
-                </div>
-                <div className="w-px h-8 bg-gray-200"></div>
-                <div className="text-center flex-1">
-                  <div className="w-3 h-3 rounded-full bg-[var(--fm-fats)] mx-auto mb-1.5 shadow-sm"></div>
-                  <p className="text-base font-bold text-[var(--fm-text-primary)]">{Math.round(selectedMeal.total_fats)}g</p>
-                  <p className="text-[10px] font-medium text-gray-500 uppercase">Fats</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -248,7 +288,7 @@ function MacroPill({
   color: string;
 }) {
   return (
-    <div className="flex items-center gap-1.5 bg-gray-50 px-2 py-1 rounded-md border border-gray-100">
+    <div className="flex items-center gap-1.5 glass-card px-2 py-1 rounded-md !rounded-lg">
       <div
         className="w-1.5 h-1.5 rounded-full"
         style={{ backgroundColor: color }}

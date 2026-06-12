@@ -1,7 +1,7 @@
 "use client";
 
 // ============================================================
-// Fit Me v2.1 — Snap Page (White/Green Theme)
+// Fit Me v3 — Snap Page (Liquid Glass Theme)
 // Upload → AI Analyze → Compress → Store → Save
 // ============================================================
 
@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import SnapUploader from "@/components/SnapUploader";
 import MealResultCard from "@/components/MealResultCard";
 import Navbar from "@/components/Navbar";
@@ -94,12 +95,17 @@ export default function SnapPage() {
   };
 
   return (
-    <div className="min-h-screen pb-28 bg-[var(--background)]">
+    <div className="min-h-screen pb-28">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 pt-14 pb-6">
+      <motion.div
+        className="flex items-center gap-3 px-5 pt-14 pb-6"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
         <Link
           href="/dashboard"
-          className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-10 h-10 rounded-xl glass-card flex items-center justify-center transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-[var(--fm-text-primary)]" />
         </Link>
@@ -114,19 +120,33 @@ export default function SnapPage() {
             Take a photo and let AI do the rest
           </p>
         </div>
-      </div>
+      </motion.div>
 
       {/* Success State */}
       {saved ? (
-        <div className="flex flex-col items-center justify-center py-20 animate-fade-in">
-          <div className="w-20 h-20 rounded-full bg-[var(--fm-green-bg)] flex items-center justify-center mb-4">
-            <Check className="w-10 h-10 text-[var(--fm-green)]" />
+        <motion.div
+          className="flex flex-col items-center justify-center py-20"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        >
+          <div className="w-20 h-20 rounded-full glass-panel flex items-center justify-center mb-4 animate-glass-orb">
+            <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+              <path
+                d="M10 20l8 8 12-16"
+                stroke="var(--fm-green)"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="animate-draw-check"
+              />
+            </svg>
           </div>
           <h2 className="text-xl font-bold text-[var(--fm-text-primary)] mb-1">Meal Logged!</h2>
           <p className="text-[var(--fm-text-muted)] text-sm">
             Redirecting to dashboard...
           </p>
-        </div>
+        </motion.div>
       ) : (
         <div className="px-5 space-y-6">
           {/* Upload Area */}

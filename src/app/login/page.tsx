@@ -1,13 +1,14 @@
 "use client";
 
 // ============================================================
-// Fit Me v2 — Login Page (White/Green Theme)
+// Fit Me v3 — Login Page (Liquid Glass Theme)
 // ============================================================
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Leaf } from "lucide-react";
+import { motion } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -41,12 +42,25 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-5 bg-[var(--background)]">
-      {/* Logo */}
-      <div className="mb-10 flex flex-col items-center animate-fade-in">
-        <div className="w-18 h-18 rounded-3xl bg-gradient-to-br from-[var(--fm-green)] to-[var(--fm-green-light)] flex items-center justify-center mb-4 shadow-lg shadow-[var(--fm-green)]/20 w-[72px] h-[72px]">
+    <div className="min-h-screen flex flex-col items-center justify-center px-5">
+      {/* Logo — glass orb */}
+      <motion.div
+        className="mb-10 flex flex-col items-center"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      >
+        <motion.div
+          className="w-[72px] h-[72px] rounded-3xl flex items-center justify-center mb-4"
+          style={{
+            background: "linear-gradient(135deg, rgba(16,185,129,0.9) 0%, rgba(52,211,153,0.9) 100%)",
+            boxShadow: "0 8px 32px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.3)",
+          }}
+          whileHover={{ scale: 1.05, rotate: 2 }}
+          whileTap={{ scale: 0.95 }}
+        >
           <Leaf className="w-9 h-9 text-white" />
-        </div>
+        </motion.div>
         <h1
           className="text-3xl font-bold text-[var(--fm-text-primary)] tracking-tight"
           style={{ fontFamily: "var(--font-heading)" }}
@@ -56,10 +70,15 @@ export default function LoginPage() {
         <p className="text-[var(--fm-text-muted)] text-sm mt-1">
           Smart dietary tracking, powered by AI
         </p>
-      </div>
+      </motion.div>
 
-      {/* Login Card */}
-      <div className="w-full max-w-sm card-elevated p-6 animate-slide-up">
+      {/* Login Card — glass panel */}
+      <motion.div
+        className="w-full max-w-sm glass-panel p-6"
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
+      >
         <form onSubmit={handleLogin} className="space-y-4">
           <div className="space-y-1.5">
             <label htmlFor="email" className="text-[var(--fm-text-secondary)] text-sm font-medium">
@@ -74,7 +93,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 h-12 rounded-xl bg-gray-50 border border-gray-200 text-[var(--fm-text-primary)] placeholder:text-gray-300 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
+                className="w-full pl-10 pr-4 h-12 rounded-xl glass-input text-[var(--fm-text-primary)] placeholder:text-[var(--fm-text-muted)]/50 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
               />
             </div>
           </div>
@@ -93,21 +112,28 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full pl-10 pr-4 h-12 rounded-xl bg-gray-50 border border-gray-200 text-[var(--fm-text-primary)] placeholder:text-gray-300 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
+                className="w-full pl-10 pr-4 h-12 rounded-xl glass-input text-[var(--fm-text-primary)] placeholder:text-[var(--fm-text-muted)]/50 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
               />
             </div>
           </div>
 
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-100">
-              <p className="text-red-500 text-sm">{error}</p>
-            </div>
+            <motion.div
+              className="p-3 rounded-xl glass-card"
+              style={{ background: "rgba(239, 68, 68, 0.08)", border: "1px solid rgba(239, 68, 68, 0.2)" }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-red-400 text-sm">{error}</p>
+            </motion.div>
           )}
 
-          <button
+          <motion.button
             type="submit"
             disabled={loading}
             className="w-full h-12 rounded-full btn-green flex items-center justify-center gap-2 text-sm"
+            whileTap={{ scale: 0.97 }}
+            whileHover={{ scale: 1.01 }}
             id="login-btn"
           >
             {loading ? (
@@ -118,12 +144,17 @@ export default function LoginPage() {
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </button>
+          </motion.button>
         </form>
-      </div>
+      </motion.div>
 
       {/* Signup Link */}
-      <p className="mt-6 text-[var(--fm-text-muted)] text-sm animate-fade-in">
+      <motion.p
+        className="mt-6 text-[var(--fm-text-muted)] text-sm"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
         Don&apos;t have an account?{" "}
         <Link
           href="/signup"
@@ -131,7 +162,7 @@ export default function LoginPage() {
         >
           Sign up free
         </Link>
-      </p>
+      </motion.p>
     </div>
   );
 }

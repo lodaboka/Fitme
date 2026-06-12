@@ -49,60 +49,59 @@
 }
 
 /* ============================================================
-   Fit Me v2 — White/Green Health Theme
+   Fit Me v3 — Liquid Glass Theme
    ============================================================ */
 
 :root {
-  --background: #FAFAFA;
-  --foreground: #1A1A2E;
-  --card: #FFFFFF;
-  --card-foreground: #1A1A2E;
-  --popover: #FFFFFF;
-  --popover-foreground: #1A1A2E;
-  --primary: #4CAF50;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: rgba(255, 255, 255, 0.6);
+  --card-foreground: #0f172a;
+  --popover: rgba(255, 255, 255, 0.8);
+  --popover-foreground: #0f172a;
+  --primary: #10b981;
   --primary-foreground: #FFFFFF;
-  --secondary: #F1F5F0;
-  --secondary-foreground: #1A1A2E;
-  --muted: #F5F5F5;
-  --muted-foreground: #6B7280;
-  --accent: #E8F5E9;
-  --accent-foreground: #2E7D32;
-  --destructive: #EF4444;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --ring: #4CAF50;
+  --secondary: rgba(241, 245, 249, 0.6);
+  --secondary-foreground: #0f172a;
+  --muted: rgba(241, 245, 249, 0.5);
+  --muted-foreground: #64748b;
+  --accent: rgba(209, 250, 229, 0.4);
+  --accent-foreground: #065f46;
+  --destructive: #ef4444;
+  --border: rgba(255, 255, 255, 0.2);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #10b981;
 
-  /* Fit Me specific colors */
-  --fm-green: #4CAF50;
-  --fm-green-light: #8BC34A;
-  --fm-green-dark: #2E7D32;
-  --fm-green-bg: #E8F5E9;
-  --fm-protein: #FF6B6B;
-  --fm-carbs: #FFB946;
-  --fm-fats: #4ECDC4;
-  --fm-fiber: #9B59B6;
-  --fm-text-primary: #1A1A2E;
-  --fm-text-secondary: #6B7280;
-  --fm-text-muted: #9CA3AF;
-  --fm-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  /* Fit Me brand colors — updated for glass theme */
+  --fm-green: #10b981;
+  --fm-green-light: #34d399;
+  --fm-green-dark: #059669;
+  --fm-green-bg: rgba(209, 250, 229, 0.4);
+  --fm-protein: #f87171;
+  --fm-carbs: #fbbf24;
+  --fm-fats: #2dd4bf;
+  --fm-fiber: #a78bfa;
+  --fm-text-primary: #0f172a;
+  --fm-text-secondary: #475569;
+  --fm-text-muted: #94a3b8;
 
   /* Chart colors */
-  --chart-1: #4CAF50;
-  --chart-2: #FF6B6B;
-  --chart-3: #FFB946;
-  --chart-4: #4ECDC4;
-  --chart-5: #9B59B6;
+  --chart-1: #10b981;
+  --chart-2: #f87171;
+  --chart-3: #fbbf24;
+  --chart-4: #2dd4bf;
+  --chart-5: #a78bfa;
 
   --radius: 0.75rem;
 
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #1A1A2E;
-  --sidebar-primary: #4CAF50;
+  --sidebar: rgba(255, 255, 255, 0.6);
+  --sidebar-foreground: #0f172a;
+  --sidebar-primary: #10b981;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #E8F5E9;
-  --sidebar-accent-foreground: #2E7D32;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #4CAF50;
+  --sidebar-accent: rgba(209, 250, 229, 0.4);
+  --sidebar-accent-foreground: #065f46;
+  --sidebar-border: rgba(255, 255, 255, 0.2);
+  --sidebar-ring: #10b981;
 }
 
 @layer base {
@@ -110,7 +109,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
   }
   html {
     @apply font-sans;
@@ -118,7 +117,110 @@
 }
 
 /* ============================================================
-   Custom Animations
+   Liquid Glass Utility Classes
+   ============================================================ */
+
+/* Primary glass panel — use for cards, containers */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border-radius: 24px;
+}
+
+/* Lighter glass card — for nested elements */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px) saturate(1.5);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+}
+
+/* Glass input fields */
+.glass-input {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  transition: all 0.2s ease;
+}
+
+.glass-input:focus {
+  border-color: var(--fm-green);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+/* Updated card-elevated with glass properties */
+.card-elevated {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-radius: 24px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Green gradient button — glass-aware */
+.btn-green {
+  background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+  color: white;
+  border: none;
+  border-radius: 28px;
+  font-weight: 600;
+  box-shadow:
+    0 4px 16px rgba(16, 185, 129, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s ease;
+}
+
+.btn-green:hover {
+  box-shadow:
+    0 6px 24px rgba(16, 185, 129, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-green:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* ============================================================
+   Liquid Blob Keyframes (Background animation)
+   ============================================================ */
+
+@keyframes blob-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(80px, 60px) scale(1.1); }
+  50% { transform: translate(40px, 120px) scale(0.95); }
+  75% { transform: translate(-30px, 80px) scale(1.05); }
+}
+
+@keyframes blob-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-60px, 40px) scale(0.9); }
+  50% { transform: translate(-100px, -30px) scale(1.15); }
+  75% { transform: translate(-40px, -60px) scale(1); }
+}
+
+@keyframes blob-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(60px, -50px) scale(1.1); }
+  66% { transform: translate(-40px, -20px) scale(0.95); }
+}
+
+/* ============================================================
+   Existing Animations (Preserved)
    ============================================================ */
 
 @keyframes fade-in {
@@ -173,6 +275,24 @@
   to { transform: translateY(0); opacity: 1; }
 }
 
+/* Glass orb pulse for loading states */
+@keyframes glass-orb-pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.2), inset 0 0 30px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 60px rgba(16, 185, 129, 0.35), inset 0 0 40px rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* Checkmark draw animation */
+@keyframes draw-check {
+  0% { stroke-dashoffset: 48; }
+  100% { stroke-dashoffset: 0; }
+}
+
 .animate-fade-in {
   animation: fade-in 0.5s ease-out forwards;
 }
@@ -198,7 +318,7 @@
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent 0%, rgba(76, 175, 80, 0.08) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(16, 185, 129, 0.08) 50%, transparent 100%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -211,6 +331,16 @@
   animation: number-tick 0.2s ease-out;
 }
 
+.animate-glass-orb {
+  animation: glass-orb-pulse 2.5s ease-in-out infinite;
+}
+
+.animate-draw-check {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: draw-check 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s forwards;
+}
+
 /* Stagger animation delays */
 .stagger-1 { animation-delay: 0.1s; }
 .stagger-2 { animation-delay: 0.2s; }
@@ -221,36 +351,6 @@
 /* ============================================================
    Custom Utility Classes
    ============================================================ */
-
-/* Elevated card with shadow */
-.card-elevated {
-  background: #FFFFFF;
-  border-radius: 20px;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.04),
-    0 4px 20px rgba(0, 0, 0, 0.04);
-  border: 1px solid rgba(0, 0, 0, 0.03);
-}
-
-/* Green gradient button */
-.btn-green {
-  background: linear-gradient(135deg, #4CAF50 0%, #8BC34A 100%);
-  color: white;
-  border: none;
-  border-radius: 28px;
-  font-weight: 600;
-  box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3);
-  transition: all 0.2s ease;
-}
-
-.btn-green:hover {
-  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
-  transform: translateY(-1px);
-}
-
-.btn-green:active {
-  transform: translateY(0);
-}
 
 /* Hide scrollbar */
 .no-scrollbar::-webkit-scrollbar {
@@ -266,14 +366,27 @@
   padding-bottom: env(safe-area-inset-bottom, 16px);
 }
 
-/* Green ring glow */
+/* Green ring glow — updated for glass theme */
 .ring-glow {
-  filter: drop-shadow(0 0 12px rgba(76, 175, 80, 0.35)) drop-shadow(0 0 4px rgba(139, 195, 74, 0.2));
+  filter: drop-shadow(0 0 16px rgba(16, 185, 129, 0.3)) drop-shadow(0 0 6px rgba(52, 211, 153, 0.15));
 }
 
-/* Skeleton loading pulse */
+/* Glass skeleton shimmer */
+.glass-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 25%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.05) 75%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}
+
+/* Legacy skeleton pulse — kept for compatibility */
 .skeleton-pulse {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background: linear-gradient(90deg, rgba(255,255,255,0.06) 25%, rgba(255,255,255,0.12) 50%, rgba(255,255,255,0.06) 75%);
   background-size: 400% 100%;
   animation: skeleton-shimmer 1.5s ease-in-out infinite;
   border-radius: 12px;
@@ -303,3 +416,11 @@
 .bg-carbs { background-color: var(--fm-carbs); }
 .bg-fats { background-color: var(--fm-fats); }
 .bg-fiber { background-color: var(--fm-fiber); }
+
+/* Green-tinted glass skeleton */
+.skeleton-pulse-green {
+  background: linear-gradient(90deg, rgba(16,185,129,0.08) 25%, rgba(52,211,153,0.15) 50%, rgba(16,185,129,0.08) 75%);
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: 12px;
+}

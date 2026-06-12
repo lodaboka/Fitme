@@ -1,9 +1,8 @@
 "use client";
 
 // ============================================================
-// Fit Me v2.1 — Calorie Ring Component (Premium Animated)
-// Animated SVG ring with CSS stroke-dashoffset transition
-// Vibrant gradient, animated counter, pulsing glow
+// Fit Me v3 — Calorie Ring (Liquid Glass Theme)
+// Animated SVG ring with glass-aware gradients & counters
 // ============================================================
 
 import { useEffect, useState, useRef } from "react";
@@ -66,16 +65,17 @@ export default function CalorieRing({
         viewBox={`0 0 ${size} ${size}`}
         className="ring-glow"
       >
-        {/* Gradient */}
+        {/* Gradient — emerald → teal → cyan for glass theme */}
         <defs>
-          <linearGradient id="calorie-gradient-v2" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#2E7D32" />
-            <stop offset="40%" stopColor="#4CAF50" />
-            <stop offset="100%" stopColor="#8BC34A" />
+          <linearGradient id="calorie-gradient-v3" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#059669" />
+            <stop offset="40%" stopColor="#10b981" />
+            <stop offset="70%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#2dd4bf" />
           </linearGradient>
           {/* Glow filter for the ring endpoint */}
-          <filter id="ring-endpoint-glow">
-            <feGaussianBlur stdDeviation="3" result="blur" />
+          <filter id="ring-endpoint-glow-v3">
+            <feGaussianBlur stdDeviation="4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -83,13 +83,13 @@ export default function CalorieRing({
           </filter>
         </defs>
 
-        {/* Background track */}
+        {/* Background track — glass-aware translucent */}
         <circle
           cx={size / 2}
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="#E8F5E9"
+          stroke="rgba(16, 185, 129, 0.1)"
           strokeWidth={strokeWidth}
         />
 
@@ -99,12 +99,12 @@ export default function CalorieRing({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="url(#calorie-gradient-v2)"
+          stroke="url(#calorie-gradient-v3)"
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={strokeDashoffset}
-          filter={animatedProgress > 5 ? "url(#ring-endpoint-glow)" : undefined}
+          filter={animatedProgress > 5 ? "url(#ring-endpoint-glow-v3)" : undefined}
           style={{
             transform: "rotate(-90deg)",
             transformOrigin: "50% 50%",
@@ -116,7 +116,7 @@ export default function CalorieRing({
       {/* Center text */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="text-[42px] font-bold text-[var(--fm-text-primary)] leading-none"
+          className="text-[42px] font-bold text-[var(--fm-text-primary)] leading-none tracking-tight"
           style={{ fontFamily: "var(--font-sans)" }}
         >
           {displayedCalories}
@@ -124,7 +124,7 @@ export default function CalorieRing({
         <span className="text-[11px] text-[var(--fm-text-muted)] mt-1 tracking-wide uppercase">
           Kcal consumed
         </span>
-        <div className="mt-2.5 px-4 py-1.5 rounded-full bg-gradient-to-r from-[var(--fm-green-bg)] to-[#E8F5E9]">
+        <div className="mt-2.5 px-4 py-1.5 rounded-full glass-card">
           <span
             className="text-[10px] font-semibold text-[var(--fm-green-dark)]"
             style={{ fontFamily: "var(--font-sans)" }}

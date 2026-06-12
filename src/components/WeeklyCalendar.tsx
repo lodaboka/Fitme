@@ -1,11 +1,12 @@
 "use client";
 
 // ============================================================
-// Fit Me v2 — Weekly Calendar Component
-// Horizontal scrollable day selector matching mockup
+// Fit Me v3 — Weekly Calendar (Liquid Glass Theme)
+// Glass pill day selector with Framer Motion taps
 // ============================================================
 
 import { useMemo } from "react";
+import { motion } from "framer-motion";
 
 interface WeeklyCalendarProps {
   selectedDate: Date;
@@ -47,23 +48,26 @@ export default function WeeklyCalendar({
         </span>
       </div>
 
-      {/* Day pills */}
+      {/* Day pills — glass-styled */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
         {days.map((day, index) => {
           const isSelected = isSameDay(day, selectedDate);
           const dayIsToday = isToday(day);
 
           return (
-            <button
+            <motion.button
               key={index}
               onClick={() => onDateSelect(day)}
-              className={`flex flex-col items-center min-w-[52px] py-2.5 px-2 rounded-2xl transition-all duration-200 ${
+              className={`flex flex-col items-center min-w-[52px] py-2.5 px-2 rounded-2xl transition-colors duration-200 ${
                 isSelected
-                  ? "bg-[var(--fm-green)] text-white shadow-md shadow-[var(--fm-green)]/25"
+                  ? "bg-[var(--fm-green)] text-white shadow-lg shadow-[var(--fm-green)]/25"
                   : dayIsToday
-                  ? "bg-[var(--fm-green-bg)] text-[var(--fm-green-dark)]"
-                  : "bg-white text-[var(--fm-text-secondary)] hover:bg-gray-50"
+                  ? "glass-card text-[var(--fm-green-dark)]"
+                  : "glass-card text-[var(--fm-text-secondary)]"
               }`}
+              whileTap={{ scale: 0.92 }}
+              whileHover={{ y: -2 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
             >
               <span className={`text-[10px] font-medium ${
                 isSelected ? "text-white/80" : ""
@@ -78,7 +82,7 @@ export default function WeeklyCalendar({
               {dayIsToday && !isSelected && (
                 <div className="w-1 h-1 rounded-full bg-[var(--fm-green)] mt-0.5" />
               )}
-            </button>
+            </motion.button>
           );
         })}
       </div>

@@ -1,10 +1,11 @@
 // ============================================================
-// Fit Me v2 — Root Layout (White/Green Theme)
+// Fit Me v3 — Root Layout (Liquid Glass Theme)
 // ============================================================
 
 import type { Metadata, Viewport } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
+import LiquidBackground from "@/components/LiquidBackground";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -39,7 +40,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#FAFAFA",
+  themeColor: "#f8fafc",
   viewportFit: "cover",
 };
 
@@ -60,8 +61,9 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
       </head>
       <body
-        className={`${inter.variable} ${poppins.variable} font-sans antialiased min-h-screen bg-background`}
+        className={`${inter.variable} ${poppins.variable} font-sans antialiased min-h-screen`}
       >
+        <LiquidBackground />
         {children}
       </body>
     </html>
