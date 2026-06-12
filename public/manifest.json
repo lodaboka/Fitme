@@ -1,0 +1,16 @@
+{
+  "name": "Fit Me",
+  "short_name": "FitMe",
+  "description": "Smart dietary tracking powered by AI",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    }
+  ]
+}
