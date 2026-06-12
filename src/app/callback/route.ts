@@ -1,6 +1,7 @@
 // ============================================================
 // Fit Me — Auth Callback Route
-// Handles OAuth redirects (for future Google auth support)
+// Handles email verification & OAuth redirects
+// New users → /onboarding, returning users → /dashboard
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,8 +15,27 @@ export async function GET(request: NextRequest) {
   if (code) {
     const supabase = await createClient();
     await supabase.auth.exchangeCodeForSession(code);
+
+    // Check if user has completed onboarding
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("onboarding_completed")
+        .eq("id", user.id)
+        .single();
+
+      // New signup → send straight to onboarding (skip login page)
+      if (!profile || !profile.onboarding_completed) {
+        return NextResponse.redirect(`${origin}/onboarding`);
+      }
+    }
   }
 
-  // Redirect to dashboard after auth
+  // Returning verified user → dashboard
   return NextResponse.redirect(`${origin}/dashboard`);
 }
+
