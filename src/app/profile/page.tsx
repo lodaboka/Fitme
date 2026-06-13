@@ -1,8 +1,9 @@
 "use client";
 
 // ============================================================
-// Fit Me v2.1 — Profile Page
-// Fixed: Avatar upload now works with Supabase Storage
+// Fit Me v3 — Profile Page (Liquid Glass Theme)
+// Editable weight & calorie goals with stepper inputs
+// Glass panels, Framer Motion animations
 // ============================================================
 
 import { useState, useEffect, useRef } from "react";
@@ -19,10 +20,17 @@ import {
   Camera,
   Settings,
   Loader2,
+  Minus,
+  Plus,
+  Check,
+  Weight,
+  Target,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Profile } from "@/lib/types";
+import { calculateMacroSplit } from "@/lib/calculations";
 
 const MENU_ITEMS = [
   { href: "/snap", icon: Flame, label: "Daily Intake", desc: "Track your meals" },
@@ -31,12 +39,37 @@ const MENU_ITEMS = [
   { href: "/profile", icon: Heart, label: "Favourites Food", desc: "Coming soon" },
 ];
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08, delayChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring" as const, stiffness: 300, damping: 30 },
+  },
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Editable fields
+  const [editCurrentWeight, setEditCurrentWeight] = useState<number>(0);
+  const [editTargetWeight, setEditTargetWeight] = useState<number>(0);
+  const [editCalorieGoal, setEditCalorieGoal] = useState<number>(0);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -50,11 +83,27 @@ export default function ProfilePage() {
         .eq("id", user.id)
         .single();
 
-      if (data) setProfile(data);
+      if (data) {
+        setProfile(data);
+        setEditCurrentWeight(data.current_weight_kg || 0);
+        setEditTargetWeight(data.target_weight_kg || 0);
+        setEditCalorieGoal(data.daily_calories_goal || 0);
+      }
       setLoading(false);
     };
     fetchProfile();
   }, []);
+
+  // Track changes
+  useEffect(() => {
+    if (!profile) return;
+    const changed =
+      editCurrentWeight !== (profile.current_weight_kg || 0) ||
+      editTargetWeight !== (profile.target_weight_kg || 0) ||
+      editCalorieGoal !== (profile.daily_calories_goal || 0);
+    setHasChanges(changed);
+    setSaved(false);
+  }, [editCurrentWeight, editTargetWeight, editCalorieGoal, profile]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,6 +171,55 @@ export default function ProfilePage() {
     }
   };
 
+  const handleSaveChanges = async () => {
+    if (!profile || !hasChanges) return;
+    setSaving(true);
+
+    try {
+      const supabase = createClient();
+
+      // Recalculate macros based on new calorie target
+      const macros = calculateMacroSplit(editCalorieGoal, profile.goal || "maintain");
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          current_weight_kg: editCurrentWeight,
+          target_weight_kg: editTargetWeight,
+          daily_calories_goal: editCalorieGoal,
+          daily_protein_goal: macros.protein,
+          daily_carbs_goal: macros.carbs,
+          daily_fat_goal: macros.fat,
+        })
+        .eq("id", profile.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              current_weight_kg: editCurrentWeight,
+              target_weight_kg: editTargetWeight,
+              daily_calories_goal: editCalorieGoal,
+              daily_protein_goal: macros.protein,
+              daily_carbs_goal: macros.carbs,
+              daily_fat_goal: macros.fat,
+            }
+          : prev
+      );
+
+      setSaved(true);
+      setHasChanges(false);
+    } catch (err) {
+      console.error("Save error:", err);
+      alert("Failed to save changes.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
@@ -131,17 +229,16 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        {/* Skeleton loading */}
+      <div className="min-h-screen flex items-center justify-center">
         <div className="w-full max-w-sm px-5 space-y-6">
           <div className="flex flex-col items-center">
-            <div className="w-24 h-24 rounded-full skeleton-pulse" />
-            <div className="h-5 w-32 skeleton-pulse mt-4" />
-            <div className="h-3 w-24 skeleton-pulse mt-2" />
+            <div className="w-24 h-24 rounded-full glass-skeleton" />
+            <div className="h-5 w-32 glass-skeleton mt-4 rounded-full" />
+            <div className="h-3 w-24 glass-skeleton mt-2 rounded-full" />
           </div>
           <div className="space-y-3">
             {[1,2,3,4].map(i => (
-              <div key={i} className="h-16 skeleton-pulse rounded-2xl" />
+              <div key={i} className="h-16 glass-skeleton rounded-2xl" />
             ))}
           </div>
         </div>
@@ -152,12 +249,20 @@ export default function ProfilePage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen pb-24 bg-[var(--background)]">
+    <motion.div
+      className="min-h-screen pb-24"
+      initial="hidden"
+      animate="visible"
+      variants={containerVariants}
+    >
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 pt-14 pb-4">
+      <motion.div
+        className="flex items-center gap-3 px-5 pt-14 pb-4"
+        variants={itemVariants}
+      >
         <Link
           href="/dashboard"
-          className="w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center hover:bg-gray-50 transition-colors"
+          className="w-10 h-10 rounded-xl glass-card flex items-center justify-center transition-colors"
         >
           <ArrowLeft className="w-5 h-5 text-[var(--fm-text-primary)]" />
         </Link>
@@ -167,14 +272,14 @@ export default function ProfilePage() {
         >
           My Profile
         </h1>
-      </div>
+      </motion.div>
 
-      <div className="px-5 space-y-6">
+      <div className="px-5 space-y-5">
         {/* Profile Card */}
-        <div className="card-elevated p-6 flex flex-col items-center">
+        <motion.div className="glass-panel p-6 flex flex-col items-center" variants={itemVariants}>
           {/* Avatar */}
           <div className="relative mb-4">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--fm-green)] to-[var(--fm-green-light)] flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--fm-green)] to-[var(--fm-green-light)] flex items-center justify-center overflow-hidden border-4 border-white/10 shadow-lg">
               {profile.avatar_url ? (
                 <img
                   src={profile.avatar_url}
@@ -192,14 +297,14 @@ export default function ProfilePage() {
                 </div>
               )}
             </div>
-            <button
+            <motion.button
               onClick={() => avatarInputRef.current?.click()}
               disabled={uploading}
-              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[var(--fm-green)] flex items-center justify-center shadow-md border-2 border-white hover:bg-[var(--fm-green-dark)] transition-colors disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-[var(--fm-green)] flex items-center justify-center shadow-md border-2 border-white/10 hover:bg-[var(--fm-green-dark)] transition-colors disabled:opacity-50"
+              whileTap={{ scale: 0.85 }}
             >
               <Camera className="w-3.5 h-3.5 text-white" />
-            </button>
-            {/* Hidden file input for avatar */}
+            </motion.button>
             <input
               ref={avatarInputRef}
               type="file"
@@ -223,45 +328,104 @@ export default function ProfilePage() {
               ? "💪 Gaining weight"
               : "⚖️ Maintaining"}
           </p>
+        </motion.div>
 
-          {/* Stats row */}
-          <div className="flex gap-6 mt-5 pt-5 border-t border-gray-100 w-full justify-center">
-            <div className="text-center">
-              <p className="text-lg font-bold text-[var(--fm-text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>
-                {profile.current_weight_kg || "—"}
-              </p>
-              <p className="text-[10px] text-[var(--fm-text-muted)]">Current kg</p>
-            </div>
-            <div className="w-px bg-gray-100" />
-            <div className="text-center">
-              <p className="text-lg font-bold text-[var(--fm-green)]" style={{ fontFamily: "var(--font-heading)" }}>
-                {profile.target_weight_kg || "—"}
-              </p>
-              <p className="text-[10px] text-[var(--fm-text-muted)]">Target kg</p>
-            </div>
-            <div className="w-px bg-gray-100" />
-            <div className="text-center">
-              <p className="text-lg font-bold text-[var(--fm-text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>
-                {profile.daily_calories_goal}
-              </p>
-              <p className="text-[10px] text-[var(--fm-text-muted)]">Daily kcal</p>
-            </div>
+        {/* Edit Goals Section */}
+        <motion.div className="glass-panel p-5" variants={itemVariants}>
+          <h3 className="text-sm font-bold text-[var(--fm-text-primary)] mb-4 flex items-center gap-2">
+            <span className="inline-block w-1 h-4 rounded-full bg-[var(--fm-green)]" />
+            Edit Goals
+          </h3>
+
+          <div className="space-y-4">
+            {/* Current Weight */}
+            <StepperField
+              label="Current Weight"
+              value={editCurrentWeight}
+              onChange={setEditCurrentWeight}
+              step={0.5}
+              min={20}
+              max={300}
+              unit="kg"
+              icon={<Weight className="w-4 h-4 text-[var(--fm-text-muted)]" />}
+            />
+
+            {/* Target Weight */}
+            <StepperField
+              label="Target Weight"
+              value={editTargetWeight}
+              onChange={setEditTargetWeight}
+              step={0.5}
+              min={20}
+              max={300}
+              unit="kg"
+              icon={<Target className="w-4 h-4 text-[var(--fm-green)]" />}
+            />
+
+            {/* Daily Calorie Target */}
+            <StepperField
+              label="Daily Calories"
+              value={editCalorieGoal}
+              onChange={setEditCalorieGoal}
+              step={50}
+              min={800}
+              max={6000}
+              unit="kcal"
+              icon={<Flame className="w-4 h-4 text-[var(--fm-fats)]" />}
+            />
           </div>
-        </div>
+
+          {/* Save Button */}
+          <AnimatePresence>
+            {(hasChanges || saved) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mt-5"
+              >
+                <motion.button
+                  onClick={handleSaveChanges}
+                  disabled={saving || saved || !hasChanges}
+                  className="w-full h-12 rounded-full text-sm font-semibold text-white transition-all disabled:opacity-60 flex items-center justify-center gap-2"
+                  style={{
+                    background: saved
+                      ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
+                      : "linear-gradient(135deg, var(--fm-green) 0%, var(--fm-green-light) 100%)",
+                    boxShadow: "0 4px 16px rgba(16, 185, 129, 0.3)",
+                  }}
+                  whileTap={!saving && !saved ? { scale: 0.95 } : {}}
+                >
+                  {saving ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  ) : saved ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Saved!
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Menu Items */}
-        <div className="card-elevated overflow-hidden">
+        <motion.div className="glass-panel overflow-hidden" variants={itemVariants}>
           {MENU_ITEMS.map((item, index) => {
             const Icon = item.icon;
             return (
               <Link
                 key={index}
                 href={item.href}
-                className={`flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors ${
-                  index < MENU_ITEMS.length - 1 ? "border-b border-gray-50" : ""
+                className={`flex items-center gap-4 px-5 py-4 hover:bg-white/5 transition-colors ${
+                  index < MENU_ITEMS.length - 1 ? "border-b border-white/5" : ""
                 }`}
               >
-                <div className="w-10 h-10 rounded-xl bg-[var(--fm-green-bg)] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl glass-card flex items-center justify-center">
                   <Icon className="w-5 h-5 text-[var(--fm-green)]" />
                 </div>
                 <div className="flex-1">
@@ -270,45 +434,104 @@ export default function ProfilePage() {
                   </p>
                   <p className="text-xs text-[var(--fm-text-muted)]">{item.desc}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-300" />
+                <ChevronRight className="w-4 h-4 text-[var(--fm-text-muted)]" />
               </Link>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* Settings & Logout */}
-        <div className="space-y-3">
+        <motion.div className="space-y-3" variants={itemVariants}>
           <Link
             href="/settings"
-            className="card-elevated flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors w-full"
+            className="glass-panel flex items-center gap-4 px-5 py-4 hover:bg-white/5 transition-colors w-full"
           >
-            <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl glass-card flex items-center justify-center">
               <Settings className="w-5 h-5 text-[var(--fm-text-muted)]" />
             </div>
             <p className="text-sm font-medium text-[var(--fm-text-primary)] flex-1">
               Settings
             </p>
-            <ChevronRight className="w-4 h-4 text-gray-300" />
+            <ChevronRight className="w-4 h-4 text-[var(--fm-text-muted)]" />
           </Link>
 
-          <button
+          <motion.button
             onClick={handleSignOut}
-            className="card-elevated flex items-center gap-4 px-5 py-4 hover:bg-red-50 transition-colors w-full text-left"
+            className="glass-panel flex items-center gap-4 px-5 py-4 hover:bg-red-500/5 transition-colors w-full text-left"
+            whileTap={{ scale: 0.98 }}
             id="signout-btn"
           >
-            <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "rgba(239, 68, 68, 0.1)" }}>
               <LogOut className="w-5 h-5 text-red-400" />
             </div>
             <p className="text-sm font-medium text-red-400">Log out</p>
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        <p className="text-center text-[10px] text-gray-300 pb-4">
-          Fit Me v2.1 · Powered by Gemini AI
+        <p className="text-center text-[10px] text-[var(--fm-text-muted)] pb-4">
+          Fit Me v3 · Powered by Gemini AI
         </p>
       </div>
 
       <Navbar />
+    </motion.div>
+  );
+}
+
+// ── Stepper Field Component ──────────────────────────────────
+function StepperField({
+  label,
+  value,
+  onChange,
+  step,
+  min,
+  max,
+  unit,
+  icon,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  step: number;
+  min: number;
+  max: number;
+  unit: string;
+  icon: React.ReactNode;
+}) {
+  const decrement = () => onChange(Math.max(min, +(value - step).toFixed(1)));
+  const increment = () => onChange(Math.min(max, +(value + step).toFixed(1)));
+
+  return (
+    <div className="flex items-center justify-between glass-card p-3 rounded-xl">
+      <div className="flex items-center gap-2.5">
+        {icon}
+        <div>
+          <p className="text-xs font-semibold text-[var(--fm-text-primary)]">{label}</p>
+          <p className="text-[10px] text-[var(--fm-text-muted)]">{unit}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-2">
+        <motion.button
+          onClick={decrement}
+          className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+          whileTap={{ scale: 0.85 }}
+        >
+          <Minus className="w-3.5 h-3.5" />
+        </motion.button>
+        <span
+          className="text-sm font-bold text-[var(--fm-text-primary)] w-16 text-center"
+          style={{ fontFamily: "var(--font-heading)" }}
+        >
+          {value}
+        </span>
+        <motion.button
+          onClick={increment}
+          className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+          whileTap={{ scale: 0.85 }}
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </motion.button>
+      </div>
     </div>
   );
 }

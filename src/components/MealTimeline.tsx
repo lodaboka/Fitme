@@ -3,18 +3,21 @@
 // ============================================================
 // Fit Me v3 — Meal Timeline (Liquid Glass Theme)
 // Glass cards with Framer Motion stagger + animated modal
+// Now with delete functionality & AnimatePresence exit
 // ============================================================
 
 import { FoodLog, MealCategory } from "@/lib/types";
-import { Camera, Plus, X } from "lucide-react";
+import { Camera, Plus, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { createClient } from "@/lib/supabase/client";
 
 interface MealTimelineProps {
   logs: FoodLog[];
   selectedMealType?: MealCategory | "all";
+  onDelete?: (logId: string) => void;
 }
 
 const MEAL_TABS: { label: string; value: MealCategory | "all" }[] = [
@@ -27,15 +30,52 @@ const MEAL_TABS: { label: string; value: MealCategory | "all" }[] = [
 export default function MealTimeline({
   logs,
   selectedMealType = "all",
+  onDelete,
 }: MealTimelineProps) {
   const [selectedMeal, setSelectedMeal] = useState<FoodLog | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FoodLog | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
 
-  // Filter logic: compares stored category to active filter state.
-  // Note: "all" displays everything.
+  // Filter logic
   const filteredLogs =
     selectedMealType === "all"
       ? logs
       : logs.filter((l) => l.meal_category === selectedMealType);
+
+  const handleDeleteClick = (e: React.MouseEvent, log: FoodLog) => {
+    e.stopPropagation();
+    setDeleteTarget(log);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("food_logs")
+        .delete()
+        .eq("id", deleteTarget.id);
+
+      if (error) throw error;
+
+      // Notify parent to remove from state
+      onDelete?.(deleteTarget.id);
+      setDeleteTarget(null);
+
+      // Show toast
+      setToast("Meal deleted");
+      setTimeout(() => setToast(null), 2000);
+    } catch (err) {
+      console.error("Delete failed:", err);
+      setToast("Failed to delete");
+      setTimeout(() => setToast(null), 2000);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   if (filteredLogs.length === 0) {
     return (
@@ -67,79 +107,166 @@ export default function MealTimeline({
 
   return (
     <div className="space-y-3">
-      {filteredLogs.map((log, index) => (
-        <motion.div
-          key={log.id}
-          onClick={() => setSelectedMeal(log)}
-          className="glass-panel p-3 flex gap-3 cursor-pointer hover:shadow-lg transition-shadow duration-200"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 300,
-            damping: 30,
-            delay: index * 0.05,
-          }}
-          whileHover={{ scale: 1.01, y: -2 }}
-          whileTap={{ scale: 0.98 }}
-        >
-          {/* Thumbnail */}
-          <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 glass-card">
-            {log.image_url ? (
-              <img
-                src={log.image_url}
-                alt="Food"
-                className="w-full h-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-[var(--fm-text-muted)]">
-                <Camera className="w-6 h-6" />
-              </div>
-            )}
-          </div>
-
-          {/* Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 pr-2">
-                <h4 className="text-sm font-semibold text-[var(--fm-text-primary)] truncate">
-                  {log.items_json?.[0]?.name || log.meal_category}
-                </h4>
-                <p className="text-[11px] text-[var(--fm-text-muted)] mt-0.5 truncate">
-                  {log.meal_category} · {Math.round(log.total_calories)} kcal
-                </p>
-              </div>
-              <span className="text-[10px] text-[var(--fm-text-muted)] shrink-0 mt-0.5">
-                {new Date(log.logged_at).toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                })}
-              </span>
+      <AnimatePresence mode="popLayout">
+        {filteredLogs.map((log, index) => (
+          <motion.div
+            key={log.id}
+            layout
+            onClick={() => setSelectedMeal(log)}
+            className="glass-panel p-3 flex gap-3 cursor-pointer hover:shadow-lg transition-shadow duration-200"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, x: -100, height: 0, marginBottom: 0, padding: 0, overflow: "hidden" }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 30,
+              delay: index * 0.05,
+            }}
+            whileHover={{ scale: 1.01, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+          >
+            {/* Thumbnail */}
+            <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 glass-card">
+              {log.image_url ? (
+                <img
+                  src={log.image_url}
+                  alt="Food"
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[var(--fm-text-muted)]">
+                  <Camera className="w-6 h-6" />
+                </div>
+              )}
             </div>
 
-            {/* Macro pills */}
-            <div className="flex flex-wrap gap-2 mt-2">
-              <MacroPill
-                label="Protein"
-                value={Math.round(log.total_protein)}
-                color="var(--fm-protein)"
-              />
-              <MacroPill
-                label="Fats"
-                value={Math.round(log.total_fats)}
-                color="var(--fm-fats)"
-              />
-              <MacroPill
-                label="Carbs"
-                value={Math.round(log.total_carbs)}
-                color="var(--fm-carbs)"
-              />
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="min-w-0 pr-2">
+                  <h4 className="text-sm font-semibold text-[var(--fm-text-primary)] truncate">
+                    {log.items_json?.[0]?.name || log.meal_category}
+                  </h4>
+                  <p className="text-[11px] text-[var(--fm-text-muted)] mt-0.5 truncate">
+                    {log.meal_category} · {Math.round(log.total_calories)} kcal
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                  <span className="text-[10px] text-[var(--fm-text-muted)]">
+                    {new Date(log.logged_at).toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </span>
+                  {/* Delete button */}
+                  <motion.button
+                    onClick={(e) => handleDeleteClick(e, log)}
+                    className="w-7 h-7 rounded-lg flex items-center justify-center opacity-40 hover:opacity-100 hover:bg-red-500/10 transition-all duration-200"
+                    whileTap={{ scale: 0.85 }}
+                    id={`delete-meal-${log.id}`}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </motion.button>
+                </div>
+              </div>
+
+              {/* Macro pills */}
+              <div className="flex flex-wrap gap-2 mt-2">
+                <MacroPill
+                  label="Protein"
+                  value={Math.round(log.total_protein)}
+                  color="var(--fm-protein)"
+                />
+                <MacroPill
+                  label="Fats"
+                  value={Math.round(log.total_fats)}
+                  color="var(--fm-fats)"
+                />
+                <MacroPill
+                  label="Carbs"
+                  value={Math.round(log.total_carbs)}
+                  color="var(--fm-carbs)"
+                />
+              </div>
             </div>
-          </div>
-        </motion.div>
-      ))}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {deleteTarget && (
+          <motion.div
+            className="fixed inset-0 z-[70] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !deleting && setDeleteTarget(null)}
+          >
+            {/* Backdrop */}
+            <motion.div
+              className="absolute inset-0 bg-black/40 backdrop-blur-md"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+
+            {/* Modal */}
+            <motion.div
+              className="relative glass-panel w-full max-w-xs p-6 rounded-3xl shadow-2xl text-center"
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Red icon */}
+              <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+                style={{ background: "rgba(239, 68, 68, 0.1)", border: "1px solid rgba(239, 68, 68, 0.2)" }}
+              >
+                <Trash2 className="w-6 h-6 text-red-400" />
+              </div>
+
+              <h3 className="text-base font-bold text-[var(--fm-text-primary)] mb-1">
+                Delete this meal?
+              </h3>
+              <p className="text-xs text-[var(--fm-text-muted)] mb-5">
+                {deleteTarget.items_json?.[0]?.name || deleteTarget.meal_category} · {Math.round(deleteTarget.total_calories)} kcal
+              </p>
+
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={() => setDeleteTarget(null)}
+                  disabled={deleting}
+                  className="flex-1 h-11 rounded-full glass-card text-sm font-semibold text-[var(--fm-text-primary)] hover:shadow-md transition-all disabled:opacity-50"
+                  whileTap={{ scale: 0.95 }}
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  onClick={handleConfirmDelete}
+                  disabled={deleting}
+                  className="flex-1 h-11 rounded-full text-sm font-semibold text-white transition-all disabled:opacity-50"
+                  style={{
+                    background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.3)",
+                  }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {deleting ? (
+                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin mx-auto" />
+                  ) : (
+                    "Delete"
+                  )}
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Detail Modal with AnimatePresence */}
       <AnimatePresence>
@@ -271,6 +398,23 @@ export default function MealTimeline({
                 </div>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Success Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            className="fixed bottom-28 left-1/2 z-[80] glass-panel px-5 py-3 rounded-full shadow-lg"
+            initial={{ opacity: 0, y: 20, x: "-50%" }}
+            animate={{ opacity: 1, y: 0, x: "-50%" }}
+            exit={{ opacity: 0, y: 20, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <p className="text-sm font-semibold text-[var(--fm-text-primary)]">
+              {toast === "Meal deleted" ? "✓ " : "✗ "}{toast}
+            </p>
           </motion.div>
         )}
       </AnimatePresence>

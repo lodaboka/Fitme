@@ -23,12 +23,23 @@ type MealCategory =
   | "Evening Snack"
   | "Dinner";
 
+interface DetectedItem {
+  name: string;
+  quantity: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fats_g: number;
+  fiber_g: number;
+}
+
 interface ParsedNutrition {
   dish_name: string;
   calories: number;
   macros: { protein_g: number; fats_g: number; carbs_g: number };
   micros: { fiber_g: number; sugar_g: number; sodium_mg: number };
   confidence_score: number;
+  detected_items: DetectedItem[];
 }
 
 interface VisionProvider {
@@ -38,27 +49,47 @@ interface VisionProvider {
 
 // ── Shared System Prompt ─────────────────────────────────────
 const VISION_SYSTEM_PROMPT = `You are a master dietitian specialized in South Asian and Indian cuisine.
-Analyze the uploaded image to parse its accurate nutritional metrics. Account for invisible culinary elements typical to Indian preparations (e.g., mustard oil, ghee, specific subzis, or composition of flours like Atta/Maida).
+Analyze the uploaded food image with extreme precision. You MUST:
+1. Identify EVERY individual food item visible (e.g., roti, dal, rice, sabzi, chutney).
+2. COUNT exact quantities — if you see 2 rotis, report quantity as "2", NOT "1 serving". If you see a bowl of dal, report "1 bowl".
+3. Calculate per-item nutrition based on the detected quantity.
+4. Account for invisible culinary elements typical to Indian preparations (ghee, oil, masalas, flour types like atta/maida).
 
 OUTPUT FORMAT:
 Return ONLY a raw JSON string matching the schema below. No markdown wrappers, no conversational text.
 
 SCHEMA:
 {
-  "dish_name": "string",
-  "calories": number,
+  "dish_name": "string (overall meal name, e.g. 'Indian Thali' or 'Roti with Dal')",
+  "calories": number (total for entire meal),
   "macros": {
-    "protein_g": number,
-    "fats_g": number,
-    "carbs_g": number
+    "protein_g": number (total),
+    "fats_g": number (total),
+    "carbs_g": number (total)
   },
   "micros": {
-    "fiber_g": number,
-    "sugar_g": number,
-    "sodium_mg": number
+    "fiber_g": number (total),
+    "sugar_g": number (total),
+    "sodium_mg": number (total)
   },
-  "confidence_score": number
-}`;
+  "confidence_score": number (0-1),
+  "detected_items": [
+    {
+      "name": "string (e.g. 'Roti', 'Dal Tadka', 'Jeera Rice')",
+      "quantity": "string (e.g. '2', '1 bowl', '1 plate', '3 pieces')",
+      "calories": number (for this item at this quantity),
+      "protein_g": number,
+      "carbs_g": number,
+      "fats_g": number,
+      "fiber_g": number
+    }
+  ]
+}
+
+CRITICAL RULES:
+- detected_items MUST contain at least 1 item.
+- The sum of all detected_items calories should approximately equal the total calories.
+- Be specific with quantities: "2" not "some", "1 bowl" not "a portion".`;
 
 // ── Meal Category (DB-safe values only) ──────────────────────
 function getMealCategory(hour: number): MealCategory {
@@ -209,6 +240,33 @@ function normalizeOutput(raw: string): ParsedNutrition {
     throw new Error("Missing dish_name in AI response");
   }
 
+  // Parse detected_items if present, otherwise create a single item fallback
+  const detectedItems: DetectedItem[] = [];
+  if (Array.isArray(parsed.detected_items) && parsed.detected_items.length > 0) {
+    for (const item of parsed.detected_items) {
+      detectedItems.push({
+        name: String(item.name || "Unknown Item"),
+        quantity: String(item.quantity || "1"),
+        calories: Number(item.calories) || 0,
+        protein_g: Number(item.protein_g) || 0,
+        carbs_g: Number(item.carbs_g) || 0,
+        fats_g: Number(item.fats_g) || 0,
+        fiber_g: Number(item.fiber_g) || 0,
+      });
+    }
+  } else {
+    // Fallback: wrap the entire meal as a single detected item
+    detectedItems.push({
+      name: String(parsed.dish_name),
+      quantity: "1 serving",
+      calories: Number(parsed.calories) || 0,
+      protein_g: Number(parsed.macros?.protein_g) || 0,
+      carbs_g: Number(parsed.macros?.carbs_g) || 0,
+      fats_g: Number(parsed.macros?.fats_g) || 0,
+      fiber_g: Number(parsed.micros?.fiber_g) || 0,
+    });
+  }
+
   return {
     dish_name: String(parsed.dish_name),
     calories: Number(parsed.calories) || 0,
@@ -223,6 +281,7 @@ function normalizeOutput(raw: string): ParsedNutrition {
       sodium_mg: Number(parsed.micros?.sodium_mg) || 0,
     },
     confidence_score: Number(parsed.confidence_score) || 0,
+    detected_items: detectedItems,
   };
 }
 
@@ -318,14 +377,19 @@ export async function POST(request: NextRequest) {
     const carbs = normalized.macros.carbs_g;
     const fiber = normalized.micros.fiber_g;
 
-    const items = [
-      {
-        name: normalized.dish_name,
-        quantity: "1 serving",
-        ingredients: [],
-        macros: { calories, protein, carbs, fats, fiber },
+    // Build items array from AI-detected individual items
+    const items = normalized.detected_items.map((item) => ({
+      name: item.name,
+      quantity: item.quantity,
+      ingredients: [] as string[],
+      macros: {
+        calories: item.calories,
+        protein: item.protein_g,
+        carbs: item.carbs_g,
+        fats: item.fats_g,
+        fiber: item.fiber_g,
       },
-    ];
+    }));
 
     // ── 5. Determine Meal Category ───────────────────────────
     const hr =

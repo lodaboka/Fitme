@@ -89,7 +89,7 @@ export default function SnapUploader({
           ctx.drawImage(img, 0, 0, width, height);
 
           // Convert to base64 (remove the data:image/jpeg;base64, prefix)
-          const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
           const base64String = dataUrl.split(",")[1];
           resolve(base64String);
         };

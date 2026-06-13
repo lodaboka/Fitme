@@ -2,19 +2,23 @@
 
 // ============================================================
 // Fit Me v3 — Meal Result Card (Liquid Glass Theme)
-// Glass panels, animated checkmark, Framer Motion accordions
+// Glass panels, animated checkmark, meal category dropdown,
+// "Not sure?" quantity editor with live macro recalculation
 // ============================================================
 
-import { SnapResponse, MealCategory } from "@/lib/types";
-import { Check, ChevronDown, ChevronUp, Utensils, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { SnapResponse, MealCategory, FoodItem } from "@/lib/types";
+import { Check, ChevronDown, Utensils, Sparkles, Minus, Plus, Pencil } from "lucide-react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { MEAL_CATEGORIES, MEAL_CATEGORY_ICONS } from "@/lib/meal-categories";
 
 interface MealResultCardProps {
   result: SnapResponse;
   imagePreview: string;
   onSaved: () => void;
   loggedCategory?: MealCategory;
+  onCategoryChange?: (cat: MealCategory) => void;
+  onItemsChange?: (items: FoodItem[]) => void;
 }
 
 export default function MealResultCard({
@@ -22,9 +26,75 @@ export default function MealResultCard({
   imagePreview,
   onSaved,
   loggedCategory,
+  onCategoryChange,
+  onItemsChange,
 }: MealResultCardProps) {
   const [expandedItem, setExpandedItem] = useState<number | null>(null);
-  const { items, total_macros } = result;
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showQuantityEditor, setShowQuantityEditor] = useState(false);
+  const [editedItems, setEditedItems] = useState<FoodItem[]>(result.items);
+
+  // Calculate totals from edited items
+  const total_macros = useMemo(() => {
+    return editedItems.reduce(
+      (acc, item) => ({
+        calories: acc.calories + item.macros.calories,
+        protein: acc.protein + item.macros.protein,
+        carbs: acc.carbs + item.macros.carbs,
+        fats: acc.fats + item.macros.fats,
+        fiber: acc.fiber + item.macros.fiber,
+      }),
+      { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 }
+    );
+  }, [editedItems]);
+
+  const items = editedItems;
+
+  // Parse numeric quantity from string like "2", "1 bowl", "3 pieces"
+  const parseQuantity = (q: string): number => {
+    const match = q.match(/^(\d+(?:\.\d+)?)/);
+    return match ? parseFloat(match[1]) : 1;
+  };
+
+  // Get the unit suffix from quantity (e.g., " bowl" from "1 bowl")
+  const getUnit = (q: string): string => {
+    const match = q.match(/^\d+(?:\.\d+)?\s*(.*)/);
+    return match && match[1] ? ` ${match[1]}` : "";
+  };
+
+  const handleQuantityChange = (index: number, delta: number) => {
+    setEditedItems((prev) => {
+      const updated = [...prev];
+      const item = { ...updated[index] };
+      const originalQty = parseQuantity(result.items[index]?.quantity || "1");
+      const currentQty = parseQuantity(item.quantity);
+      const newQty = Math.max(0.5, currentQty + delta);
+      const unit = getUnit(item.quantity);
+
+      // Calculate per-unit macros based on original values
+      const originalMacros = result.items[index]?.macros || item.macros;
+      const perUnit = {
+        calories: originalMacros.calories / originalQty,
+        protein: originalMacros.protein / originalQty,
+        carbs: originalMacros.carbs / originalQty,
+        fats: originalMacros.fats / originalQty,
+        fiber: originalMacros.fiber / originalQty,
+      };
+
+      item.quantity = `${newQty}${unit}`;
+      item.macros = {
+        calories: Math.round(perUnit.calories * newQty),
+        protein: Math.round(perUnit.protein * newQty * 10) / 10,
+        carbs: Math.round(perUnit.carbs * newQty * 10) / 10,
+        fats: Math.round(perUnit.fats * newQty * 10) / 10,
+        fiber: Math.round(perUnit.fiber * newQty * 10) / 10,
+      };
+
+      updated[index] = item;
+      onItemsChange?.(updated);
+      return updated;
+    });
+  };
 
   return (
     <motion.div
@@ -53,11 +123,56 @@ export default function MealResultCard({
             />
           </svg>
         </div>
-        <div className="flex items-center gap-2 px-4 py-2 rounded-full glass-card">
-          <Sparkles className="w-4 h-4 text-[var(--fm-green)]" />
-          <span className="text-xs font-semibold text-[var(--fm-green-dark)]">
-            Logged as {loggedCategory || "Meal"}
-          </span>
+
+        {/* Meal Category Badge with dropdown */}
+        <div className="relative">
+          <motion.button
+            onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+            className="flex items-center gap-2 px-4 py-2 rounded-full glass-card hover:shadow-md transition-all"
+            whileTap={{ scale: 0.95 }}
+            id="meal-category-dropdown-btn"
+          >
+            <Sparkles className="w-4 h-4 text-[var(--fm-green)]" />
+            <span className="text-xs font-semibold text-[var(--fm-green-dark)]">
+              Logged as {loggedCategory || "Meal"}
+            </span>
+            <ChevronDown className={`w-3.5 h-3.5 text-[var(--fm-text-muted)] transition-transform duration-200 ${showCategoryDropdown ? "rotate-180" : ""}`} />
+          </motion.button>
+
+          {/* Category Dropdown */}
+          <AnimatePresence>
+            {showCategoryDropdown && (
+              <motion.div
+                className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-48 glass-panel rounded-2xl overflow-hidden shadow-xl z-20"
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+              >
+                {MEAL_CATEGORIES.map((cat) => (
+                  <motion.button
+                    key={cat}
+                    onClick={() => {
+                      onCategoryChange?.(cat);
+                      setShowCategoryDropdown(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-left text-sm transition-colors ${
+                      loggedCategory === cat
+                        ? "bg-[var(--fm-green)]/10 text-[var(--fm-green-dark)] font-semibold"
+                        : "text-[var(--fm-text-primary)] hover:bg-white/5"
+                    }`}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span className="text-base">{MEAL_CATEGORY_ICONS[cat]}</span>
+                    <span>{cat}</span>
+                    {loggedCategory === cat && (
+                      <Check className="w-3.5 h-3.5 text-[var(--fm-green)] ml-auto" />
+                    )}
+                  </motion.button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
@@ -113,6 +228,67 @@ export default function MealResultCard({
               color="var(--fm-fats)"
             />
           </div>
+
+          {/* "Not sure?" quantity editor toggle */}
+          <motion.button
+            onClick={() => setShowQuantityEditor(!showQuantityEditor)}
+            className="mt-4 flex items-center gap-1.5 text-xs text-[var(--fm-text-muted)] hover:text-[var(--fm-green)] transition-colors"
+            whileTap={{ scale: 0.97 }}
+            id="edit-quantities-btn"
+          >
+            <Pencil className="w-3 h-3" />
+            {showQuantityEditor ? "Hide editor" : "Not sure about the meal? Edit items →"}
+          </motion.button>
+
+          {/* Quantity Editor Panel */}
+          <AnimatePresence>
+            {showQuantityEditor && (
+              <motion.div
+                className="mt-3 space-y-2"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+                {editedItems.map((item, index) => (
+                  <div
+                    key={index}
+                    className="glass-card p-3 rounded-xl flex items-center gap-3"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-[var(--fm-text-primary)] truncate">
+                        {item.name}
+                      </p>
+                      <p className="text-[10px] text-[var(--fm-text-muted)]">
+                        {Math.round(item.macros.calories)} kcal
+                      </p>
+                    </div>
+
+                    {/* Stepper */}
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        onClick={() => handleQuantityChange(index, -1)}
+                        className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+                        whileTap={{ scale: 0.85 }}
+                      >
+                        <Minus className="w-3.5 h-3.5" />
+                      </motion.button>
+                      <span className="text-sm font-bold text-[var(--fm-text-primary)] w-12 text-center">
+                        {item.quantity}
+                      </span>
+                      <motion.button
+                        onClick={() => handleQuantityChange(index, 1)}
+                        className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+                        whileTap={{ scale: 0.85 }}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </motion.button>
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
 
@@ -222,7 +398,7 @@ export default function MealResultCard({
         id="snap-goto-dashboard-btn"
       >
         <Check className="w-4 h-4" />
-        Go to Dashboard
+        Log Meal
       </motion.button>
     </motion.div>
   );

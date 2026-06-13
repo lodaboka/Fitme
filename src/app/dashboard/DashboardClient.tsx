@@ -5,7 +5,7 @@
 // Framer Motion animations, glass panels, fluid interactions
 // ============================================================
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Menu, Bell, Plus } from "lucide-react";
 import Link from "next/link";
@@ -49,6 +49,12 @@ export default function DashboardClient({
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(true);
+  const [logs, setLogs] = useState(allLogs);
+
+  // Handle meal deletion — remove from local state
+  const handleDeleteLog = useCallback((logId: string) => {
+    setLogs((prev) => prev.filter((log) => log.id !== logId));
+  }, []);
 
   // Show skeleton for 800ms on mount
   useEffect(() => {
@@ -58,7 +64,7 @@ export default function DashboardClient({
 
   // Filter logs for selected date
   const todayLogs = useMemo(() => {
-    return allLogs.filter((log) => {
+    return logs.filter((log) => {
       const logDate = new Date(log.logged_at);
       return (
         logDate.getFullYear() === selectedDate.getFullYear() &&
@@ -66,7 +72,7 @@ export default function DashboardClient({
         logDate.getDate() === selectedDate.getDate()
       );
     });
-  }, [allLogs, selectedDate]);
+  }, [logs, selectedDate]);
 
   // Calculate daily totals
   const totals: DailyMacroTotals = useMemo(() => {
@@ -235,7 +241,7 @@ export default function DashboardClient({
               Add Meal
             </Link>
           </div>
-          <MealTimeline logs={todayLogs} />
+          <MealTimeline logs={todayLogs} onDelete={handleDeleteLog} />
         </motion.div>
       </div>
 

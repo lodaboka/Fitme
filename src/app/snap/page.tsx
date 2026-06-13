@@ -2,7 +2,7 @@
 
 // ============================================================
 // Fit Me v3 — Snap Page (Liquid Glass Theme)
-// Upload → AI Analyze → Compress → Store → Save
+// Upload → AI Analyze → Edit items/category → Store → Save
 // ============================================================
 
 import { useState } from "react";
@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import SnapUploader from "@/components/SnapUploader";
 import MealResultCard from "@/components/MealResultCard";
 import Navbar from "@/components/Navbar";
-import { SnapResponse, MealCategory } from "@/lib/types";
+import { SnapResponse, MealCategory, FoodItem } from "@/lib/types";
 import { createClient } from "@/lib/supabase/client";
 
 export default function SnapPage() {
@@ -86,8 +86,64 @@ export default function SnapPage() {
     }
   };
 
-  const handleSaved = () => {
+  // Handle meal category change
+  // Handle meal category change — local state only, save on "Log Meal"
+  const handleCategoryChange = (newCategory: MealCategory) => {
+    setLoggedCategory(newCategory);
+  };
+
+  // Handle item quantity edits — local state only, save on "Log Meal"
+  const [editedItems, setEditedItems] = useState<FoodItem[] | null>(null);
+
+  const handleItemsChange = (updatedItems: FoodItem[]) => {
+    setEditedItems(updatedItems);
+  };
+
+  // Save all edits (category + items) to DB, then redirect
+  const handleSaved = async () => {
     setSaved(true);
+
+    // Persist any user edits to DB before redirecting
+    if (logId && (editedItems || loggedCategory)) {
+      try {
+        const supabase = createClient();
+        const updatePayload: Record<string, any> = {};
+
+        if (loggedCategory) {
+          updatePayload.meal_category = loggedCategory;
+        }
+
+        if (editedItems) {
+          const totals = editedItems.reduce(
+            (acc, item) => ({
+              calories: acc.calories + item.macros.calories,
+              protein: acc.protein + item.macros.protein,
+              carbs: acc.carbs + item.macros.carbs,
+              fats: acc.fats + item.macros.fats,
+              fiber: acc.fiber + item.macros.fiber,
+            }),
+            { calories: 0, protein: 0, carbs: 0, fats: 0, fiber: 0 }
+          );
+
+          updatePayload.items_json = editedItems;
+          updatePayload.total_calories = totals.calories;
+          updatePayload.total_protein = totals.protein;
+          updatePayload.total_carbs = totals.carbs;
+          updatePayload.total_fats = totals.fats;
+          updatePayload.total_fiber = totals.fiber;
+        }
+
+        if (Object.keys(updatePayload).length > 0) {
+          await supabase
+            .from("food_logs")
+            .update(updatePayload)
+            .eq("id", logId);
+        }
+      } catch (err) {
+        console.warn("Final save failed:", err);
+      }
+    }
+
     setTimeout(() => {
       router.push("/dashboard");
       router.refresh();
@@ -166,6 +222,8 @@ export default function SnapPage() {
                 imagePreview={imagePreview}
                 onSaved={handleSaved}
                 loggedCategory={loggedCategory}
+                onCategoryChange={handleCategoryChange}
+                onItemsChange={handleItemsChange}
               />
             </div>
           )}
