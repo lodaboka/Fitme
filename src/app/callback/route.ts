@@ -1,16 +1,14 @@
 // ============================================================
-// Fit Me — Auth Callback Route (Cross-Browser OTP Verification)
+// Fit Me — Legacy Callback Route (Catches Supabase default URL)
 //
-// Uses token_hash + verifyOtp instead of PKCE exchangeCodeForSession.
-// This is STATELESS — no cookies from the original browser are needed,
-// so clicking the email link in ANY browser works correctly.
+// Supabase generates confirmation emails with {{ .ConfirmationURL }}
+// which resolves to /callback?token_hash=...&type=email by default.
+// This route catches that default URL and processes OTP verification
+// identically to /auth/callback.
 //
-// ⚠️  SUPABASE DASHBOARD ACTION:
-//     Go to Authentication > Email Templates > Confirm signup
-//     Change the template URL from {{ .ConfirmationURL }} to:
-//     {{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=email
-//
-//     OR simply leave the default — /callback route will catch it.
+// Supports both:
+//   • token_hash + type (stateless OTP — works cross-browser)
+//   • code (legacy PKCE exchange — same-browser fallback)
 // ============================================================
 
 import { NextRequest, NextResponse } from "next/server";
@@ -32,14 +30,14 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.verifyOtp({ token_hash, type });
 
       if (error) {
-        console.error("[auth/callback] OTP verification error:", error.message);
-        return NextResponse.redirect(`${origin}/login?error=auth-fallback`);
+        console.error("[callback] OTP verification error:", error.message);
+        return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
       }
 
       return await redirectBasedOnProfile(supabase, origin);
     } catch (err) {
-      console.error("[auth/callback] Auth callback error:", err);
-      return NextResponse.redirect(`${origin}/login?error=auth-fallback`);
+      console.error("[callback] Auth callback error:", err);
+      return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
     }
   }
 
@@ -49,18 +47,18 @@ export async function GET(request: NextRequest) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
 
       if (error) {
-        console.error("[auth/callback] Code exchange error:", error.message);
-        return NextResponse.redirect(`${origin}/login?error=auth-fallback`);
+        console.error("[callback] Code exchange error:", error.message);
+        return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
       }
 
       return await redirectBasedOnProfile(supabase, origin);
     } catch (err) {
-      console.error("[auth/callback] Legacy callback error:", err);
+      console.error("[callback] Legacy callback error:", err);
     }
   }
 
-  // ── No valid params → redirect to login with error ────────
-  return NextResponse.redirect(`${origin}/login?error=auth-fallback`);
+  // ── No valid params → login with error ────────────────────
+  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
 }
 
 // ── Helper: redirect to onboarding or dashboard ─────────────
@@ -85,5 +83,5 @@ async function redirectBasedOnProfile(
     return NextResponse.redirect(`${origin}/dashboard`);
   }
 
-  return NextResponse.redirect(`${origin}/login?error=auth-fallback`);
+  return NextResponse.redirect(`${origin}/login?error=auth-callback-failed`);
 }

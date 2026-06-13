@@ -5,7 +5,7 @@
 // Upload → AI Analyze → Edit items/category → Store → Save
 // ============================================================
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function SnapPage() {
   const router = useRouter();
+  const [, startTransition] = useTransition();
   const [result, setResult] = useState<SnapResponse | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -145,9 +146,11 @@ export default function SnapPage() {
     }
 
     setTimeout(() => {
-      router.push("/dashboard");
-      router.refresh();
-    }, 1500);
+      startTransition(() => {
+        router.push("/dashboard");
+        router.refresh();
+      });
+    }, 800);
   };
 
   return (

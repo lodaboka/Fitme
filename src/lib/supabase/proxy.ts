@@ -41,7 +41,10 @@ export async function updateSession(request: NextRequest) {
   const isAuthPage =
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/signup") ||
-    request.nextUrl.pathname.startsWith("/callback");
+    request.nextUrl.pathname.startsWith("/callback") ||
+    request.nextUrl.pathname.startsWith("/auth/callback") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/update-password");
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthPage) {

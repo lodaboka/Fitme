@@ -5,7 +5,7 @@
 // Framer Motion animations, glass panels, fluid interactions
 // ============================================================
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback, lazy, Suspense } from "react";
 import { motion } from "framer-motion";
 import { Menu, Bell, Plus } from "lucide-react";
 import Link from "next/link";
@@ -17,9 +17,10 @@ import WeeklyCalendar from "@/components/WeeklyCalendar";
 import MealTimeline from "@/components/MealTimeline";
 import MacroWarning from "@/components/MacroWarning";
 import HamburgerMenu from "@/components/HamburgerMenu";
-import AiInsightBubble from "@/components/AiInsightBubble";
 import Navbar from "@/components/Navbar";
-import DashboardSkeleton from "@/components/DashboardSkeleton";
+
+// Lazy-load below-fold AI component (triggers its own API call)
+const AiInsightBubble = lazy(() => import("@/components/AiInsightBubble"));
 
 interface DashboardClientProps {
   profile: Profile;
@@ -49,18 +50,11 @@ export default function DashboardClient({
 }: DashboardClientProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(true);
   const [logs, setLogs] = useState(allLogs);
 
   // Handle meal deletion — remove from local state
   const handleDeleteLog = useCallback((logId: string) => {
     setLogs((prev) => prev.filter((log) => log.id !== logId));
-  }, []);
-
-  // Show skeleton for 800ms on mount
-  useEffect(() => {
-    const timer = setTimeout(() => setShowSkeleton(false), 800);
-    return () => clearTimeout(timer);
   }, []);
 
   // Filter logs for selected date
@@ -103,9 +97,7 @@ export default function DashboardClient({
     return exceeded;
   }, [totals, profile]);
 
-  if (showSkeleton) {
-    return <DashboardSkeleton />;
-  }
+  // No artificial skeleton delay — server component already fetched data
 
   return (
     <motion.div
@@ -211,9 +203,22 @@ export default function DashboardClient({
           />
         </motion.div>
 
-        {/* AI Coach Insight Bubble */}
+        {/* AI Coach Insight Bubble — lazy-loaded */}
         <motion.div variants={itemVariants}>
-          <AiInsightBubble />
+          <Suspense fallback={
+            <div className="glass-panel p-4 animate-pulse">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-xl glass-skeleton shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3 glass-skeleton w-16 rounded-full" />
+                  <div className="h-3 glass-skeleton w-full rounded-full" />
+                  <div className="h-3 glass-skeleton w-2/3 rounded-full" />
+                </div>
+              </div>
+            </div>
+          }>
+            <AiInsightBubble />
+          </Suspense>
         </motion.div>
 
         {/* Weekly Calendar */}

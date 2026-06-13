@@ -4,7 +4,7 @@
 // Fit Me v3 — Login Page (Liquid Glass Theme)
 // ============================================================
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Lock, ArrowRight, Leaf } from "lucide-react";
@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -32,8 +33,10 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.push("/dashboard");
-      router.refresh();
+      startTransition(() => {
+        router.push("/dashboard");
+        router.refresh();
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

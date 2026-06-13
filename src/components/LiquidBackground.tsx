@@ -4,11 +4,17 @@
 // Fit Me — Liquid Glass Animated Background
 // Slow-moving organic gradient blobs that refract through
 // glass UI elements. Fixed behind all content.
+//
+// OPTIMIZED: will-change + contain for GPU compositing.
+// Blobs animate via CSS only — zero JS, zero React re-renders.
 // ============================================================
 
 export default function LiquidBackground() {
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500">
+    <div
+      className="fixed inset-0 -z-10 overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-500"
+      style={{ contain: "strict" }}
+    >
       {/* Blob 1 — Emerald (top-left drift) */}
       <div
         className="absolute w-[500px] h-[500px] rounded-full opacity-30 dark:opacity-20 blur-3xl"
@@ -18,6 +24,8 @@ export default function LiquidBackground() {
           top: "-10%",
           left: "-5%",
           animation: "blob-float-1 25s ease-in-out infinite",
+          willChange: "transform",
+          contain: "layout style",
         }}
       />
 
@@ -30,6 +38,8 @@ export default function LiquidBackground() {
           top: "30%",
           right: "-15%",
           animation: "blob-float-2 30s ease-in-out infinite",
+          willChange: "transform",
+          contain: "layout style",
         }}
       />
 
@@ -42,6 +52,8 @@ export default function LiquidBackground() {
           bottom: "-5%",
           left: "20%",
           animation: "blob-float-3 22s ease-in-out infinite",
+          willChange: "transform",
+          contain: "layout style",
         }}
       />
 
