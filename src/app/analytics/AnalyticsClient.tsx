@@ -1,15 +1,14 @@
 "use client";
 
 // ============================================================
-// Fit Me v3 — Analytics Client (Liquid Glass Theme)
-// 4 premium glassmorphic visualizations:
+// Fit Me v4 — Analytics Client (Liquid Glass Theme)
+// Premium glassmorphic visualizations:
 // 1. Calorie Goal Adherence (line chart with target baseline)
 // 2. Macro Balance Score (donut chart)
-// 3. Weight Trend (line chart)
-// 4. AI Insights Card (rule-based)
+// 3. Most Eaten Foods (segmented by meal time, weekly/monthly)
 // ============================================================
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -25,7 +24,7 @@ import {
 } from "recharts";
 import { Profile, FoodLog } from "@/lib/types";
 import Navbar from "@/components/Navbar";
-import { ArrowLeft, TrendingUp, Target, Brain, PieChart as PieIcon } from "lucide-react";
+import { ArrowLeft, TrendingUp, PieChart as PieIcon, Utensils } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -66,7 +65,36 @@ const GLASS_TOOLTIP = {
   labelStyle: { color: "var(--fm-text-muted)", fontSize: "10px" },
 };
 
+// ── Most Eaten Foods Helper Types ────────────────────────────
+interface MostEatenItem {
+  name: string;
+  count: number;
+  imageUrl: string | null;
+}
+
+type MealTimeSlot = "breakfast" | "lunch" | "dinner";
+
+const MEAL_TIME_CONFIG: Record<MealTimeSlot, { emoji: string; label: string; categories: string[] }> = {
+  breakfast: {
+    emoji: "🌅",
+    label: "Most Eaten Breakfast",
+    categories: ["Breakfast", "Morning Snack"],
+  },
+  lunch: {
+    emoji: "🍲",
+    label: "Most Eaten Lunch",
+    categories: ["Lunch"],
+  },
+  dinner: {
+    emoji: "🌙",
+    label: "Most Eaten Dinner",
+    categories: ["Dinner", "Evening Snack", "Late Night"],
+  },
+};
+
 export default function AnalyticsClient({ profile, logs }: AnalyticsClientProps) {
+  const [mostEatenRange, setMostEatenRange] = useState<"week" | "month">("week");
+
   // ── 7-day calorie data with goal baseline ──────────────────
   const calorieData = useMemo(() => {
     const data = [];
@@ -128,51 +156,75 @@ export default function AnalyticsClient({ profile, logs }: AnalyticsClientProps)
 
   const totalMacroGrams = pieData.reduce((s, d) => s + d.value, 0);
 
-  // ── AI Insights (Gemini-powered, cached daily) ────────────
-  const [insight, setInsight] = useState<string>("");
-  const [insightLoading, setInsightLoading] = useState(true);
+  // ── Most Eaten Foods (parsed from items_json) ─────────────
+  const mostEatenBySlot = useMemo(() => {
+    const daysBack = mostEatenRange === "week" ? 7 : 30;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysBack);
 
-  useEffect(() => {
-    const fetchInsight = async () => {
-      // Check localStorage cache — only fetch once per day
-      const today = new Date().toISOString().split("T")[0];
-      const cacheKey = "fitme_ai_insight";
-      const cached = localStorage.getItem(cacheKey);
+    const filteredLogs = logs.filter(
+      (log) => new Date(log.logged_at) >= cutoff
+    );
 
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.date === today && parsed.text) {
-            setInsight(parsed.text);
-            setInsightLoading(false);
-            return;
-          }
-        } catch {
-          // Invalid cache, refetch
-        }
-      }
-
-      // Fetch fresh insight from Gemini
-      try {
-        const res = await fetch("/api/insights", { method: "POST" });
-        if (res.ok) {
-          const data = await res.json();
-          const text = data.insight || "Keep tracking your meals for insights! 💪";
-          setInsight(text);
-          // Cache with today's date
-          localStorage.setItem(cacheKey, JSON.stringify({ date: today, text }));
-        } else {
-          setInsight("Keep tracking your meals for insights! 💪");
-        }
-      } catch {
-        setInsight("Keep tracking your meals for insights! 💪");
-      } finally {
-        setInsightLoading(false);
-      }
+    const result: Record<MealTimeSlot, MostEatenItem> = {
+      breakfast: { name: "", count: 0, imageUrl: null },
+      lunch: { name: "", count: 0, imageUrl: null },
+      dinner: { name: "", count: 0, imageUrl: null },
     };
 
-    fetchInsight();
-  }, []);
+    for (const slot of Object.keys(MEAL_TIME_CONFIG) as MealTimeSlot[]) {
+      const config = MEAL_TIME_CONFIG[slot];
+      const slotLogs = filteredLogs.filter((log) =>
+        config.categories.includes(log.meal_category)
+      );
+
+      // Count each unique item name across all meals in this slot
+      const freq: Record<string, { count: number; imageUrl: string | null }> = {};
+
+      for (const log of slotLogs) {
+        const items = log.items_json;
+        if (!Array.isArray(items)) continue;
+
+        for (const item of items) {
+          const itemName = (item.name || "").trim().toLowerCase();
+          if (!itemName) continue;
+
+          if (!freq[itemName]) {
+            freq[itemName] = { count: 0, imageUrl: null };
+          }
+          freq[itemName].count += 1;
+          // Keep the latest image URL for this item
+          if (log.image_url) {
+            freq[itemName].imageUrl = log.image_url;
+          }
+        }
+      }
+
+      // Find the most frequent
+      let topName = "";
+      let topCount = 0;
+      let topImage: string | null = null;
+
+      for (const [name, data] of Object.entries(freq)) {
+        if (data.count > topCount) {
+          topName = name;
+          topCount = data.count;
+          topImage = data.imageUrl;
+        }
+      }
+
+      result[slot] = {
+        name: topName ? topName.charAt(0).toUpperCase() + topName.slice(1) : "",
+        count: topCount,
+        imageUrl: topImage,
+      };
+    }
+
+    return result;
+  }, [logs, mostEatenRange]);
+
+  const rangeDaysLabel = mostEatenRange === "week" ? "this week" : "this month";
+  const hasAnyMostEaten = Object.values(mostEatenBySlot).some((v) => v.count > 0);
 
   return (
     <motion.div
@@ -325,93 +377,107 @@ export default function AnalyticsClient({ profile, logs }: AnalyticsClientProps)
           )}
         </motion.div>
 
-        {/* ── 3. Weight Trend ──────────────────────────────────── */}
+        {/* ── 3. Most Eaten Foods ────────────────────────────────── */}
         <motion.div className="glass-panel p-5" variants={itemVariants}>
-          <h3 className="text-sm font-bold text-[var(--fm-text-primary)] mb-1 flex items-center gap-2">
-            <Target className="w-4 h-4 text-[var(--fm-fats)]" />
-            Weight Progress
-          </h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-sm font-bold text-[var(--fm-text-primary)] flex items-center gap-2">
+              <Utensils className="w-4 h-4 text-[var(--fm-green)]" />
+              Most Eaten Foods
+            </h3>
+
+            {/* Week / Month Toggle */}
+            <div className="flex rounded-full glass-card overflow-hidden p-0.5">
+              {(["week", "month"] as const).map((range) => (
+                <motion.button
+                  key={range}
+                  onClick={() => setMostEatenRange(range)}
+                  className={`px-3 py-1 rounded-full text-[10px] font-semibold transition-all ${
+                    mostEatenRange === range
+                      ? "bg-[var(--fm-green)] text-white shadow-sm"
+                      : "text-[var(--fm-text-muted)] hover:text-[var(--fm-text-primary)]"
+                  }`}
+                  whileTap={{ scale: 0.92 }}
+                >
+                  {range === "week" ? "7 Days" : "30 Days"}
+                </motion.button>
+              ))}
+            </div>
+          </div>
           <p className="text-[10px] text-[var(--fm-text-muted)] mb-4">
-            Current vs Target weight
+            Your favorites by time of day
           </p>
 
-          <div className="flex items-center justify-around py-4">
-            <div className="text-center">
-              <p
-                className="text-3xl font-bold text-[var(--fm-text-primary)]"
-                style={{ fontFamily: "var(--font-heading)" }}
-              >
-                {profile.current_weight_kg || "—"}
-              </p>
-              <p className="text-[10px] text-[var(--fm-text-muted)] mt-1 uppercase tracking-wider">Current kg</p>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-12 h-px bg-[var(--fm-green)]/30" />
-              <span className="text-[9px] text-[var(--fm-green)] font-semibold uppercase">
-                {profile.goal === "lose" ? "↓ Losing" : profile.goal === "gain" ? "↑ Gaining" : "= Maintain"}
-              </span>
-              <div className="w-12 h-px bg-[var(--fm-green)]/30" />
-            </div>
-            <div className="text-center">
-              <p
-                className="text-3xl font-bold text-[var(--fm-green)]"
-                style={{ fontFamily: "var(--font-heading)" }}
-              >
-                {profile.target_weight_kg || "—"}
-              </p>
-              <p className="text-[10px] text-[var(--fm-text-muted)] mt-1 uppercase tracking-wider">Target kg</p>
-            </div>
-          </div>
+          {hasAnyMostEaten ? (
+            <div className="space-y-3">
+              {(Object.keys(MEAL_TIME_CONFIG) as MealTimeSlot[]).map((slot) => {
+                const config = MEAL_TIME_CONFIG[slot];
+                const item = mostEatenBySlot[slot];
 
-          {/* Progress bar */}
-          {profile.current_weight_kg && profile.target_weight_kg && (
-            <div className="mt-2">
-              <div className="h-2 rounded-full glass-card overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-[var(--fm-green)] to-[var(--fm-green-light)]"
-                  initial={{ width: 0 }}
-                  animate={{
-                    width: `${Math.min(
-                      100,
-                      profile.goal === "lose"
-                        ? ((profile.current_weight_kg - profile.target_weight_kg) /
-                            (profile.current_weight_kg - profile.target_weight_kg + 0.01)) *
-                            100 || 50
-                        : ((profile.target_weight_kg - profile.current_weight_kg) /
-                            (profile.target_weight_kg - profile.current_weight_kg + 0.01)) *
-                            100 || 50
-                    )}%`,
-                  }}
-                  transition={{ duration: 1, delay: 0.5 }}
-                />
-              </div>
-              <div className="flex justify-between mt-1">
-                <span className="text-[9px] text-[var(--fm-text-muted)]">Start</span>
-                <span className="text-[9px] text-[var(--fm-text-muted)]">Goal</span>
-              </div>
+                return (
+                  <motion.div
+                    key={slot}
+                    className="glass-card p-3.5 rounded-xl flex items-center gap-3"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.1 }}
+                  >
+                    {/* Thumbnail or Emoji */}
+                    <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 flex items-center justify-center"
+                      style={{
+                        background: item.imageUrl
+                          ? undefined
+                          : "linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(52,211,153,0.05) 100%)",
+                      }}
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name || "Food"}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xl">{config.emoji}</span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] text-[var(--fm-text-muted)] uppercase tracking-wider mb-0.5">
+                        {config.label}
+                      </p>
+                      {item.count > 0 ? (
+                        <>
+                          <p className="text-sm font-bold text-[var(--fm-text-primary)] truncate">
+                            {item.name}
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-[var(--fm-text-muted)] italic">
+                          No data yet
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Frequency Badge */}
+                    {item.count > 0 && (
+                      <div className="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0"
+                        style={{
+                          background: "rgba(16,185,129,0.1)",
+                          color: "var(--fm-green)",
+                        }}
+                      >
+                        {item.count}x {rangeDaysLabel}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
             </div>
+          ) : (
+            <p className="text-sm text-[var(--fm-text-muted)] text-center py-6">
+              Log more meals to discover your favorites!
+            </p>
           )}
-        </motion.div>
-
-        {/* ── 4. AI Insights Card ─────────────────────────────── */}
-        <motion.div className="glass-panel p-5" variants={itemVariants}>
-          <h3 className="text-sm font-bold text-[var(--fm-text-primary)] mb-3 flex items-center gap-2">
-            <Brain className="w-4 h-4 text-[var(--fm-fiber)]" />
-            AI Insight
-            <span className="text-[9px] text-[var(--fm-text-muted)] font-normal ml-auto">Powered by Gemini</span>
-          </h3>
-          <div className="glass-card p-4 rounded-xl">
-            {insightLoading ? (
-              <div className="space-y-2">
-                <div className="h-3 glass-skeleton w-full rounded-full" />
-                <div className="h-3 glass-skeleton w-3/4 rounded-full" />
-              </div>
-            ) : (
-              <p className="text-sm text-[var(--fm-text-secondary)] leading-relaxed">
-                {insight}
-              </p>
-            )}
-          </div>
         </motion.div>
       </div>
 
@@ -419,3 +485,4 @@ export default function AnalyticsClient({ profile, logs }: AnalyticsClientProps)
     </motion.div>
   );
 }
+

@@ -14,7 +14,6 @@ import {
   Flame,
   UtensilsCrossed,
   BarChart3,
-  Heart,
   LogOut,
   Settings,
 } from "lucide-react";
@@ -33,7 +32,6 @@ const MENU_ITEMS = [
   { href: "/snap", icon: Flame, label: "Daily Intake" },
   { href: "/nutrition", icon: UtensilsCrossed, label: "My Meals" },
   { href: "/analytics", icon: BarChart3, label: "Nutrition Report" },
-  { href: "/profile", icon: Heart, label: "Favourites Food" },
   { href: "/profile", icon: Settings, label: "Settings" },
 ];
 

@@ -1,70 +1,39 @@
 "use client";
 
 // ============================================================
-// Fit Me v3 — Signup Page (Liquid Glass Theme)
-// After signup → email verification screen (no auto-redirect)
+// Fit Me v4 — Forgot Password Page (Liquid Glass Theme)
+// Email input → triggers Supabase password reset email
 // ============================================================
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, Lock, ArrowRight, Leaf, User, CheckCircle, ExternalLink } from "lucide-react";
+import { Mail, ArrowLeft, ArrowRight, Leaf, CheckCircle, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 
-export default function SignupPage() {
-  const [name, setName] = useState("");
+export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [resending, setResending] = useState(false);
-  const [resent, setResent] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
-        },
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/update-password`,
       });
 
       if (error) throw error;
-
-      // Show the email verification screen — no auto-redirect
-      setSuccess(true);
+      setSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Signup failed");
+      setError(err instanceof Error ? err.message : "Failed to send reset email");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleResendEmail = async () => {
-    setResending(true);
-    try {
-      const supabase = createClient();
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email,
-      });
-      if (error) throw error;
-      setResent(true);
-      setTimeout(() => setResent(false), 4000);
-    } catch (err) {
-      console.error("Resend failed:", err);
-    } finally {
-      setResending(false);
     }
   };
 
@@ -76,13 +45,12 @@ export default function SignupPage() {
     if (domain === "outlook.com" || domain === "hotmail.com" || domain === "live.com")
       return "https://outlook.live.com";
     if (domain === "yahoo.com") return "https://mail.yahoo.com";
-    if (domain === "icloud.com" || domain === "me.com") return "https://www.icloud.com/mail";
-    return `https://mail.${domain}`; // generic fallback
+    return null;
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-5">
-      {/* Logo — glass orb */}
+      {/* Logo */}
       <motion.div
         className="mb-10 flex flex-col items-center"
         initial={{ opacity: 0, y: -20 }}
@@ -95,8 +63,6 @@ export default function SignupPage() {
             background: "linear-gradient(135deg, rgba(16,185,129,0.9) 0%, rgba(52,211,153,0.9) 100%)",
             boxShadow: "0 8px 32px rgba(16,185,129,0.35), inset 0 1px 0 rgba(255,255,255,0.3)",
           }}
-          whileHover={{ scale: 1.05, rotate: 2 }}
-          whileTap={{ scale: 0.95 }}
         >
           <Leaf className="w-9 h-9 text-white" />
         </motion.div>
@@ -104,21 +70,18 @@ export default function SignupPage() {
           className="text-3xl font-bold text-[var(--fm-text-primary)] tracking-tight"
           style={{ fontFamily: "var(--font-heading)" }}
         >
-          {success ? "Check Your Email" : "Join Fit Me"}
+          {sent ? "Check Your Email" : "Reset Password"}
         </h1>
         <p className="text-[var(--fm-text-muted)] text-sm mt-1">
-          {success
-            ? "One more step to get started"
-            : "Start tracking your nutrition today"}
+          {sent ? "We've sent you a reset link" : "Enter your email to get a reset link"}
         </p>
       </motion.div>
 
-      {/* Signup / Verification Card — glass panel */}
       <AnimatePresence mode="wait">
-        {success ? (
-          /* ── Email Verification Screen ─────────────────────── */
+        {sent ? (
+          /* ── Success State ───────────────────────────────── */
           <motion.div
-            key="verify"
+            key="sent"
             className="w-full max-w-sm glass-panel p-6"
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -126,25 +89,18 @@ export default function SignupPage() {
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
             <div className="text-center space-y-5">
-              {/* Animated mail icon */}
               <motion.div
                 className="w-20 h-20 rounded-full glass-card flex items-center justify-center mx-auto"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.15 }}
               >
-                <motion.div
-                  animate={{ y: [0, -4, 0] }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <Mail className="w-10 h-10 text-[var(--fm-green)]" />
-                </motion.div>
+                <CheckCircle className="w-10 h-10 text-[var(--fm-green)]" />
               </motion.div>
 
-              {/* Explanation text */}
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-[var(--fm-text-primary)]">
-                  We&apos;ve sent a confirmation link to
+                  Password reset link sent to
                 </p>
                 <div className="px-4 py-2.5 rounded-xl glass-card">
                   <p className="text-sm font-bold text-[var(--fm-green)] break-all">
@@ -152,12 +108,10 @@ export default function SignupPage() {
                   </p>
                 </div>
                 <p className="text-xs text-[var(--fm-text-muted)] leading-relaxed">
-                  Click the link in the email to verify your account.
-                  Once verified, you&apos;ll be taken straight to setting up your profile.
+                  Click the link in the email to set your new password.
                 </p>
               </div>
 
-              {/* Open Email App button */}
               {getEmailAppUrl() && (
                 <motion.a
                   href={getEmailAppUrl()!}
@@ -165,7 +119,6 @@ export default function SignupPage() {
                   rel="noopener noreferrer"
                   className="w-full h-12 rounded-full btn-green flex items-center justify-center gap-2 text-sm"
                   whileTap={{ scale: 0.97 }}
-                  whileHover={{ scale: 1.01 }}
                   id="open-email-btn"
                 >
                   <ExternalLink className="w-4 h-4" />
@@ -173,48 +126,17 @@ export default function SignupPage() {
                 </motion.a>
               )}
 
-              {/* Resend email */}
-              <div className="pt-1">
-                {resent ? (
-                  <motion.p
-                    className="text-xs font-semibold text-[var(--fm-green)] flex items-center justify-center gap-1.5"
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    Verification email resent!
-                  </motion.p>
-                ) : (
-                  <button
-                    onClick={handleResendEmail}
-                    disabled={resending}
-                    className="text-xs text-[var(--fm-text-muted)] hover:text-[var(--fm-text-primary)] transition-colors disabled:opacity-50"
-                  >
-                    {resending ? "Sending..." : "Didn\u0027t receive it? Resend email"}
-                  </button>
-                )}
-              </div>
-
-              {/* Divider */}
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/15" />
-                <span className="text-[10px] text-[var(--fm-text-muted)] uppercase tracking-widest">or</span>
-                <div className="flex-1 h-px bg-white/15" />
-              </div>
-
-              {/* Go to sign in link */}
               <Link
                 href="/login"
                 className="block w-full h-11 rounded-full glass-card flex items-center justify-center gap-2 text-sm font-semibold text-[var(--fm-text-primary)] hover:shadow-md transition-all duration-200"
-                id="goto-signin-btn"
               >
-                Already verified? Sign In
-                <ArrowRight className="w-4 h-4" />
+                <ArrowLeft className="w-4 h-4" />
+                Back to Sign In
               </Link>
             </div>
           </motion.div>
         ) : (
-          /* ── Signup Form ─────────────────────────────────── */
+          /* ── Email Form ───────────────────────────────── */
           <motion.div
             key="form"
             className="w-full max-w-sm glass-panel p-6"
@@ -223,57 +145,20 @@ export default function SignupPage() {
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.1 }}
           >
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
-                <label htmlFor="name" className="text-[var(--fm-text-secondary)] text-sm font-medium">
-                  Name
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fm-text-muted)]" />
-                  <input
-                    id="name"
-                    type="text"
-                    placeholder="Your name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                    className="w-full pl-10 pr-4 h-12 rounded-xl glass-input text-[var(--fm-text-primary)] placeholder:text-[var(--fm-text-muted)]/50 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="signup-email" className="text-[var(--fm-text-secondary)] text-sm font-medium">
-                  Email
+                <label htmlFor="reset-email" className="text-[var(--fm-text-secondary)] text-sm font-medium">
+                  Email Address
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fm-text-muted)]" />
                   <input
-                    id="signup-email"
+                    id="reset-email"
                     type="email"
                     placeholder="you@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="w-full pl-10 pr-4 h-12 rounded-xl glass-input text-[var(--fm-text-primary)] placeholder:text-[var(--fm-text-muted)]/50 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <label htmlFor="signup-password" className="text-[var(--fm-text-secondary)] text-sm font-medium">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--fm-text-muted)]" />
-                  <input
-                    id="signup-password"
-                    type="password"
-                    placeholder="At least 6 characters"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
                     className="w-full pl-10 pr-4 h-12 rounded-xl glass-input text-[var(--fm-text-primary)] placeholder:text-[var(--fm-text-muted)]/50 focus:border-[var(--fm-green)] focus:ring-2 focus:ring-[var(--fm-green)]/20 outline-none transition-all text-sm"
                   />
                 </div>
@@ -296,13 +181,13 @@ export default function SignupPage() {
                 className="w-full h-12 rounded-full btn-green flex items-center justify-center gap-2 text-sm"
                 whileTap={{ scale: 0.97 }}
                 whileHover={{ scale: 1.01 }}
-                id="signup-btn"
+                id="reset-password-btn"
               >
                 {loading ? (
                   <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
                 ) : (
                   <>
-                    Create Account
+                    Send Reset Link
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
@@ -312,24 +197,22 @@ export default function SignupPage() {
         )}
       </AnimatePresence>
 
-      {/* Login Link */}
-      {!success && (
+      {/* Back to login */}
+      {!sent && (
         <motion.p
           className="mt-6 text-[var(--fm-text-muted)] text-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          Already have an account?{" "}
           <Link
             href="/login"
             className="text-[var(--fm-green)] hover:text-[var(--fm-green-dark)] font-semibold transition-colors"
           >
-            Sign in
+            ← Back to Sign In
           </Link>
         </motion.p>
       )}
     </div>
   );
 }
-

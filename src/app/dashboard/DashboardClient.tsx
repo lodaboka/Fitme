@@ -17,6 +17,7 @@ import WeeklyCalendar from "@/components/WeeklyCalendar";
 import MealTimeline from "@/components/MealTimeline";
 import MacroWarning from "@/components/MacroWarning";
 import HamburgerMenu from "@/components/HamburgerMenu";
+import AiInsightBubble from "@/components/AiInsightBubble";
 import Navbar from "@/components/Navbar";
 import DashboardSkeleton from "@/components/DashboardSkeleton";
 
@@ -208,6 +209,11 @@ export default function DashboardClient({
               </svg>
             }
           />
+        </motion.div>
+
+        {/* AI Coach Insight Bubble */}
+        <motion.div variants={itemVariants}>
+          <AiInsightBubble />
         </motion.div>
 
         {/* Weekly Calendar */}

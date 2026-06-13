@@ -1,9 +1,9 @@
 "use client";
 
 // ============================================================
-// Fit Me v3 — Profile Page (Liquid Glass Theme)
-// Editable weight & calorie goals with stepper inputs
-// Glass panels, Framer Motion animations
+// Fit Me v4 — Profile Page (Liquid Glass Theme)
+// "Reset Goals" replaces editable fields — routes to /onboarding
+// Glass panels, Framer Motion animations, confirmation modal
 // ============================================================
 
 import { useState, useEffect, useRef } from "react";
@@ -14,29 +14,24 @@ import {
   Flame,
   UtensilsCrossed,
   BarChart3,
-  Heart,
   LogOut,
   ChevronRight,
   Camera,
   Settings,
   Loader2,
-  Minus,
-  Plus,
-  Check,
-  Weight,
-  Target,
+  RotateCcw,
+  X,
+  AlertTriangle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import Navbar from "@/components/Navbar";
 import { Profile } from "@/lib/types";
-import { calculateMacroSplit } from "@/lib/calculations";
 
 const MENU_ITEMS = [
   { href: "/snap", icon: Flame, label: "Daily Intake", desc: "Track your meals" },
   { href: "/nutrition", icon: UtensilsCrossed, label: "My Meals", desc: "View logged meals" },
   { href: "/analytics", icon: BarChart3, label: "Nutrition Report", desc: "Charts & analytics" },
-  { href: "/profile", icon: Heart, label: "Favourites Food", desc: "Coming soon" },
 ];
 
 const containerVariants = {
@@ -61,15 +56,9 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
-
-  // Editable fields
-  const [editCurrentWeight, setEditCurrentWeight] = useState<number>(0);
-  const [editTargetWeight, setEditTargetWeight] = useState<number>(0);
-  const [editCalorieGoal, setEditCalorieGoal] = useState<number>(0);
-  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -83,27 +72,11 @@ export default function ProfilePage() {
         .eq("id", user.id)
         .single();
 
-      if (data) {
-        setProfile(data);
-        setEditCurrentWeight(data.current_weight_kg || 0);
-        setEditTargetWeight(data.target_weight_kg || 0);
-        setEditCalorieGoal(data.daily_calories_goal || 0);
-      }
+      if (data) setProfile(data);
       setLoading(false);
     };
     fetchProfile();
   }, []);
-
-  // Track changes
-  useEffect(() => {
-    if (!profile) return;
-    const changed =
-      editCurrentWeight !== (profile.current_weight_kg || 0) ||
-      editTargetWeight !== (profile.target_weight_kg || 0) ||
-      editCalorieGoal !== (profile.daily_calories_goal || 0);
-    setHasChanges(changed);
-    setSaved(false);
-  }, [editCurrentWeight, editTargetWeight, editCalorieGoal, profile]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -171,52 +144,27 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSaveChanges = async () => {
-    if (!profile || !hasChanges) return;
-    setSaving(true);
+  const handleResetGoals = async () => {
+    if (!profile) return;
+    setResetting(true);
 
     try {
       const supabase = createClient();
-
-      // Recalculate macros based on new calorie target
-      const macros = calculateMacroSplit(editCalorieGoal, profile.goal || "maintain");
-
       const { error } = await supabase
         .from("profiles")
-        .update({
-          current_weight_kg: editCurrentWeight,
-          target_weight_kg: editTargetWeight,
-          daily_calories_goal: editCalorieGoal,
-          daily_protein_goal: macros.protein,
-          daily_carbs_goal: macros.carbs,
-          daily_fat_goal: macros.fat,
-        })
+        .update({ onboarding_completed: false })
         .eq("id", profile.id);
 
       if (error) throw error;
 
-      // Update local state
-      setProfile((prev) =>
-        prev
-          ? {
-              ...prev,
-              current_weight_kg: editCurrentWeight,
-              target_weight_kg: editTargetWeight,
-              daily_calories_goal: editCalorieGoal,
-              daily_protein_goal: macros.protein,
-              daily_carbs_goal: macros.carbs,
-              daily_fat_goal: macros.fat,
-            }
-          : prev
-      );
-
-      setSaved(true);
-      setHasChanges(false);
+      setShowResetModal(false);
+      router.push("/onboarding");
+      router.refresh();
     } catch (err) {
-      console.error("Save error:", err);
-      alert("Failed to save changes.");
+      console.error("Reset goals error:", err);
+      alert("Failed to reset goals. Please try again.");
     } finally {
-      setSaving(false);
+      setResetting(false);
     }
   };
 
@@ -255,6 +203,89 @@ export default function ProfilePage() {
       animate="visible"
       variants={containerVariants}
     >
+      {/* Reset Goals Confirmation Modal */}
+      <AnimatePresence>
+        {showResetModal && (
+          <div className="fixed inset-0 z-[100]">
+            <motion.div
+              className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !resetting && setShowResetModal(false)}
+            />
+            <motion.div
+              className="absolute bottom-0 left-0 right-0 p-5"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <div
+                className="w-full max-w-sm mx-auto rounded-3xl p-6"
+                style={{
+                  background: "rgba(255, 255, 255, 0.14)",
+                  backdropFilter: "blur(32px) saturate(2)",
+                  WebkitBackdropFilter: "blur(32px) saturate(2)",
+                  border: "1px solid rgba(255, 255, 255, 0.2)",
+                  boxShadow: "0 8px 40px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.15)",
+                }}
+              >
+                <div className="flex flex-col items-center text-center">
+                  {/* Warning icon */}
+                  <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4"
+                    style={{ background: "rgba(245, 158, 11, 0.12)" }}
+                  >
+                    <AlertTriangle className="w-7 h-7 text-amber-400" />
+                  </div>
+                  <h3
+                    className="text-lg font-bold text-[var(--fm-text-primary)] mb-2"
+                    style={{ fontFamily: "var(--font-heading)" }}
+                  >
+                    Reset Your Goals?
+                  </h3>
+                  <p className="text-sm text-[var(--fm-text-muted)] leading-relaxed mb-6">
+                    This will clear your current nutrition targets and take you
+                    through the setup wizard again from scratch.
+                  </p>
+
+                  <div className="flex gap-3 w-full">
+                    <motion.button
+                      onClick={() => setShowResetModal(false)}
+                      disabled={resetting}
+                      className="flex-1 h-12 rounded-full glass-card flex items-center justify-center gap-2 text-sm font-medium text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      <X className="w-4 h-4" />
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      onClick={handleResetGoals}
+                      disabled={resetting}
+                      className="flex-1 h-12 rounded-full flex items-center justify-center gap-2 text-sm font-semibold text-white disabled:opacity-60"
+                      style={{
+                        background: "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)",
+                        boxShadow: "0 4px 16px rgba(245, 158, 11, 0.3)",
+                      }}
+                      whileTap={!resetting ? { scale: 0.95 } : {}}
+                    >
+                      {resetting ? (
+                        <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                      ) : (
+                        <>
+                          <RotateCcw className="w-4 h-4" />
+                          Reset
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <motion.div
         className="flex items-center gap-3 px-5 pt-14 pb-4"
@@ -330,87 +361,44 @@ export default function ProfilePage() {
           </p>
         </motion.div>
 
-        {/* Edit Goals Section */}
+        {/* Current Stats Summary (read-only) */}
         <motion.div className="glass-panel p-5" variants={itemVariants}>
           <h3 className="text-sm font-bold text-[var(--fm-text-primary)] mb-4 flex items-center gap-2">
             <span className="inline-block w-1 h-4 rounded-full bg-[var(--fm-green)]" />
-            Edit Goals
+            Current Goals
           </h3>
 
-          <div className="space-y-4">
-            {/* Current Weight */}
-            <StepperField
-              label="Current Weight"
-              value={editCurrentWeight}
-              onChange={setEditCurrentWeight}
-              step={0.5}
-              min={20}
-              max={300}
-              unit="kg"
-              icon={<Weight className="w-4 h-4 text-[var(--fm-text-muted)]" />}
-            />
-
-            {/* Target Weight */}
-            <StepperField
-              label="Target Weight"
-              value={editTargetWeight}
-              onChange={setEditTargetWeight}
-              step={0.5}
-              min={20}
-              max={300}
-              unit="kg"
-              icon={<Target className="w-4 h-4 text-[var(--fm-green)]" />}
-            />
-
-            {/* Daily Calorie Target */}
-            <StepperField
-              label="Daily Calories"
-              value={editCalorieGoal}
-              onChange={setEditCalorieGoal}
-              step={50}
-              min={800}
-              max={6000}
-              unit="kcal"
-              icon={<Flame className="w-4 h-4 text-[var(--fm-fats)]" />}
-            />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 rounded-xl glass-card">
+              <p className="text-lg font-bold text-[var(--fm-text-primary)]" style={{ fontFamily: "var(--font-heading)" }}>
+                {profile.current_weight_kg || "—"}
+              </p>
+              <p className="text-[9px] text-[var(--fm-text-muted)] mt-0.5 uppercase tracking-wider">kg now</p>
+            </div>
+            <div className="text-center p-3 rounded-xl glass-card">
+              <p className="text-lg font-bold text-[var(--fm-green)]" style={{ fontFamily: "var(--font-heading)" }}>
+                {profile.target_weight_kg || "—"}
+              </p>
+              <p className="text-[9px] text-[var(--fm-text-muted)] mt-0.5 uppercase tracking-wider">kg target</p>
+            </div>
+            <div className="text-center p-3 rounded-xl glass-card">
+              <p className="text-lg font-bold text-[var(--fm-fats)]" style={{ fontFamily: "var(--font-heading)" }}>
+                {profile.daily_calories_goal || "—"}
+              </p>
+              <p className="text-[9px] text-[var(--fm-text-muted)] mt-0.5 uppercase tracking-wider">kcal/day</p>
+            </div>
           </div>
 
-          {/* Save Button */}
-          <AnimatePresence>
-            {(hasChanges || saved) && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="mt-5"
-              >
-                <motion.button
-                  onClick={handleSaveChanges}
-                  disabled={saving || saved || !hasChanges}
-                  className="w-full h-12 rounded-full text-sm font-semibold text-white transition-all disabled:opacity-60 flex items-center justify-center gap-2"
-                  style={{
-                    background: saved
-                      ? "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)"
-                      : "linear-gradient(135deg, var(--fm-green) 0%, var(--fm-green-light) 100%)",
-                    boxShadow: "0 4px 16px rgba(16, 185, 129, 0.3)",
-                  }}
-                  whileTap={!saving && !saved ? { scale: 0.95 } : {}}
-                >
-                  {saving ? (
-                    <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  ) : saved ? (
-                    <>
-                      <Check className="w-4 h-4" />
-                      Saved!
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </motion.button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Reset Goals Button */}
+          <motion.button
+            onClick={() => setShowResetModal(true)}
+            className="mt-5 w-full h-12 rounded-full glass-card flex items-center justify-center gap-2 text-sm font-semibold text-amber-400 hover:bg-amber-500/5 transition-colors"
+            whileTap={{ scale: 0.95 }}
+            id="reset-goals-btn"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Reset Goals
+          </motion.button>
         </motion.div>
 
         {/* Menu Items */}
@@ -469,69 +457,11 @@ export default function ProfilePage() {
         </motion.div>
 
         <p className="text-center text-[10px] text-[var(--fm-text-muted)] pb-4">
-          Fit Me v3 · Powered by Gemini AI
+          Fit Me v4 · Powered by AI
         </p>
       </div>
 
       <Navbar />
     </motion.div>
-  );
-}
-
-// ── Stepper Field Component ──────────────────────────────────
-function StepperField({
-  label,
-  value,
-  onChange,
-  step,
-  min,
-  max,
-  unit,
-  icon,
-}: {
-  label: string;
-  value: number;
-  onChange: (v: number) => void;
-  step: number;
-  min: number;
-  max: number;
-  unit: string;
-  icon: React.ReactNode;
-}) {
-  const decrement = () => onChange(Math.max(min, +(value - step).toFixed(1)));
-  const increment = () => onChange(Math.min(max, +(value + step).toFixed(1)));
-
-  return (
-    <div className="flex items-center justify-between glass-card p-3 rounded-xl">
-      <div className="flex items-center gap-2.5">
-        {icon}
-        <div>
-          <p className="text-xs font-semibold text-[var(--fm-text-primary)]">{label}</p>
-          <p className="text-[10px] text-[var(--fm-text-muted)]">{unit}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        <motion.button
-          onClick={decrement}
-          className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
-          whileTap={{ scale: 0.85 }}
-        >
-          <Minus className="w-3.5 h-3.5" />
-        </motion.button>
-        <span
-          className="text-sm font-bold text-[var(--fm-text-primary)] w-16 text-center"
-          style={{ fontFamily: "var(--font-heading)" }}
-        >
-          {value}
-        </span>
-        <motion.button
-          onClick={increment}
-          className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
-          whileTap={{ scale: 0.85 }}
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </motion.button>
-      </div>
-    </div>
   );
 }

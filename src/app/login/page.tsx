@@ -117,6 +117,17 @@ export default function LoginPage() {
             </div>
           </div>
 
+          {/* Forgot Password */}
+          <div className="flex justify-end -mt-1">
+            <Link
+              href="/forgot-password"
+              className="text-xs text-[var(--fm-green)] hover:text-[var(--fm-green-dark)] font-medium transition-colors"
+              id="forgot-password-link"
+            >
+              Forgot Password?
+            </Link>
+          </div>
+
           {error && (
             <motion.div
               className="p-3 rounded-xl glass-card"

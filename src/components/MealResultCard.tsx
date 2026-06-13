@@ -268,7 +268,7 @@ export default function MealResultCard({
                     <div className="flex items-center gap-2">
                       <motion.button
                         onClick={() => handleQuantityChange(index, -1)}
-                        className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+                        className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
                         whileTap={{ scale: 0.85 }}
                       >
                         <Minus className="w-3.5 h-3.5" />
@@ -278,7 +278,7 @@ export default function MealResultCard({
                       </span>
                       <motion.button
                         onClick={() => handleQuantityChange(index, 1)}
-                        className="w-8 h-8 rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
+                        className="w-9 h-9 min-w-[44px] min-h-[44px] rounded-full glass-panel flex items-center justify-center text-[var(--fm-text-primary)] hover:bg-white/10 transition-colors"
                         whileTap={{ scale: 0.85 }}
                       >
                         <Plus className="w-3.5 h-3.5" />
